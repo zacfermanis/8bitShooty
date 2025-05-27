@@ -1,114 +1,79 @@
 # Active Context
 
 ## Current Focus
-- Implementing wave-based progression system
-- Adding shop system for upgrades
-- Enhancing visual environment with background buildings
-- Balancing game difficulty
+- Implementing and balancing new weapon systems
+- Shop system improvements
+- Visual feedback enhancements
 
 ## Recent Changes
-1. Added Wave System:
-   - Monsters get stronger each wave
-   - Health and speed scaling
-   - Visual feedback for wave progression
-   - Coin rewards for completing waves
-
-2. Added Shop System:
-   - Three upgradeable items:
-     - Health Upgrade (100 coins)
-     - Speed Upgrade (150 coins)
-     - Damage Upgrade (200 coins)
-   - Persistent upgrades between games
-   - Visual feedback for purchases
-   - Coin economy system
-
-3. Enhanced Visual Environment:
-   - Added background buildings
-   - Dynamic ground level with grass
-   - Wave-based background changes
-   - Improved monster appearances
-
-4. Game Balance:
-   - Increased base monster health
-   - Adjusted wave scaling
-   - Added coin rewards
-   - Progressive difficulty system
+1. Added new weapon types:
+   - Plasma Cannon
+   - Rocket Launcher
+   - Auto-targeting system
+2. Implemented weapon upgrades:
+   - Damage multipliers
+   - Fire rate improvements
+   - Special effects
+3. Enhanced shop system:
+   - More upgrade options
+   - Better visual feedback
+   - Improved navigation
 
 ## Active Decisions
-1. Wave Progression:
-   - Monsters get 20% more health per wave
-   - Speed increases by 30% per wave
-   - 50 coins reward per wave completion
-   - 10 monsters per wave
+1. Weapon Balance
+   - Plasma Cannon: High damage, medium speed
+   - Rocket Launcher: Splash damage, slower speed
+   - Auto-targeting: Limited to default projectiles
+   - Damage multipliers: Stack with weapon upgrades
 
-2. Shop System:
-   - Upgrades persist between deaths
-   - Clear visual feedback for purchases
-   - Balanced upgrade costs
-   - Maximum levels for each upgrade
+2. Shop System
+   - Scrollable item list
+   - Clear upgrade paths
+   - Balanced costs
+   - Visual feedback for purchases
 
-3. Visual Design:
-   - 8-bit style graphics
-   - Dynamic backgrounds
-   - Progressive building damage
-   - Atmospheric effects
+3. Visual Effects
+   - Distinct weapon visuals
+   - Clear damage indicators
+   - Improved feedback
+   - Performance optimization
 
 ## Next Steps
-1. Potential Features:
-   - Add more shop items
-   - Implement power-ups
-   - Add boss monsters
-   - Create special effects
+1. Balance new weapons
+2. Test upgrade combinations
+3. Optimize performance
+4. Add more visual feedback
+5. Improve shop navigation
+6. Add sound effects
+7. Implement save system
 
-2. Balance Considerations:
-   - Fine-tune upgrade costs
-   - Adjust wave difficulty scaling
-   - Balance coin economy
-   - Review monster spawn rates
+## Current Patterns
+1. Weapon System
+   - Modular design
+   - Upgrade stacking
+   - Visual feedback
+   - Performance optimization
 
-3. Visual Improvements:
-   - Add more building details
-   - Enhance background effects
-   - Improve upgrade feedback
-   - Add particle effects
+2. Shop System
+   - Scrollable interface
+   - Clear feedback
+   - Balanced progression
+   - Multiple upgrade paths
 
-## Important Patterns
-1. Wave Management:
-   - Clear wave completion conditions
-   - Progressive difficulty scaling
-   - Reward system integration
-   - Visual feedback for progression
-
-2. Shop System:
-   - Persistent upgrades
-   - Clear purchase feedback
-   - Balanced economy
-   - Visual state management
-
-3. Visual Design:
-   - Consistent 8-bit style
-   - Dynamic environment changes
-   - Clear feedback systems
-   - Atmospheric effects
+3. Visual System
+   - Distinct effects
+   - Clear feedback
+   - Performance focus
+   - Consistent style
 
 ## Project Insights
-1. Game Balance:
-   - Wave progression needs careful tuning
-   - Shop economy must be balanced
-   - Difficulty curve should be smooth
-   - Rewards should feel meaningful
-
-2. User Experience:
-   - Clear feedback is essential
-   - Visual progression helps engagement
-   - Persistent upgrades add depth
-   - Atmosphere enhances immersion
-
-3. Technical Considerations:
-   - State management is crucial
-   - Visual effects need optimization
-   - Upgrade system must be robust
-   - Wave system needs flexibility
+1. Weapon balance is crucial for engaging gameplay
+2. Clear visual feedback improves user experience
+3. Multiple upgrade paths increase replayability
+4. Performance optimization is ongoing
+5. Shop system needs regular balancing
+6. Visual effects enhance gameplay feel
+7. Auto-targeting adds strategic depth
 
 ## Active Decisions and Considerations
 - LÖVE physics vs custom collision system

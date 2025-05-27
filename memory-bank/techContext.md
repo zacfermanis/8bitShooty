@@ -1,100 +1,81 @@
 # Technical Context
 
-## Technologies Used
-1. Game Engine:
-   - LÖVE (Love2D) 11.4
-   - Lua 5.1
-   - Built-in physics
-   - Built-in graphics
-
-2. Development Tools:
-   - Visual Studio Code
-   - Git for version control
-   - LÖVE framework tools
-   - Lua debugger
+## Technology Stack
+- LÖVE (Love2D) framework
+- Lua programming language
+- Built-in LÖVE modules:
+  - graphics
+  - audio
+  - input
+  - math
+  - timer
 
 ## Development Setup
-1. Environment:
-   - Windows 10
-   - Git Bash
-   - LÖVE framework
-   - VS Code with Lua extensions
+- LÖVE 11.4 or higher
+- Lua 5.1
+- Git for version control
+- Text editor with Lua support
 
-2. Project Structure:
-   - main.lua (core game)
-   - conf.lua (configuration)
-   - memory-bank/ (documentation)
-   - assets/ (game resources)
+## Core Systems
 
-## Technical Constraints
-1. Performance:
-   - 60 FPS target
-   - Object pooling for projectiles
-   - Efficient collision detection
-   - Optimized visual effects
+### Rendering System
+- LÖVE graphics module
+- Custom drawing functions for:
+  - Player
+  - Enemies
+  - Projectiles
+  - UI elements
+- Particle effects
+- Visual feedback
 
-2. Memory:
-   - Resource management
-   - Object lifecycle
-   - State persistence
-   - Asset loading
+### Input System
+- Keyboard controls:
+  - A/D or Left/Right for movement
+  - Space for shooting
+  - Escape for menu
+- Mouse controls:
+  - Aiming
+  - Shop interaction
+  - Menu navigation
 
-3. Compatibility:
-   - LÖVE 11.4+
-   - Windows/Linux/Mac
-   - Standard resolution
-   - Keyboard controls
+### Physics System
+- Custom collision detection
+- Circle-based hitboxes
+- Splash damage calculations
+- Movement vectors
+
+### Weapon System
+- Projectile types:
+  - Default (yellow, single shot)
+  - Plasma (cyan, high damage)
+  - Rocket (orange, splash damage)
+- Damage calculations
+- Auto-targeting
+- Cooldown system
 
 ## Dependencies
-1. Core Dependencies:
-   - LÖVE framework
-   - Lua standard library
-   - Built-in physics
-   - Built-in graphics
+- No external libraries required
+- Uses LÖVE's built-in modules
+- Asset requirements:
+  - Player sprite (optional)
+  - Enemy sprites (optional)
+  - Weapon sprites (optional)
 
-2. Development Dependencies:
-   - Git
-   - VS Code
-   - Lua extensions
-   - LÖVE tools
+## Performance Considerations
+- Object pooling for projectiles
+- Efficient collision detection
+- Particle effect optimization
+- Memory management for entities
+- Frame rate targeting (60 FPS)
 
-## Tool Usage Patterns
-1. Game Development:
-   - LÖVE game loop
-   - State management
-   - Input handling
-   - Collision detection
-
-2. Visual Development:
-   - 8-bit style graphics
-   - Dynamic backgrounds
-   - Building system
-   - Visual effects
-
-3. System Implementation:
-   - Wave management
-   - Shop system
-   - Upgrade system
-   - Environment system
-
-## Technical Implementation Details
-1. Game Systems:
-   - State management
-   - Wave progression
-   - Shop functionality
-   - Upgrade system
-
-2. Visual Systems:
-   - Background management
-   - Building system
-   - Effect system
-   - UI rendering
-
-3. Game Mechanics:
-   - Player controls
-   - Shooting system
-   - Monster AI
-   - Collision handling
+## Development Guidelines
+1. Maintain consistent code style
+2. Document complex systems
+3. Optimize critical paths
+4. Test on multiple platforms
+5. Regular performance profiling
+6. Version control best practices
+7. Regular backups
 
 ## Development Workflow
 1. Code Organization:

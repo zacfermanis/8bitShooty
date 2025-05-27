@@ -17,14 +17,16 @@ local game = {
         message = "",
         timer = 0,
         color = {1, 1, 1}
-    }
+    },
+    shopScroll = 0, -- Added shop scroll position
+    itemsPerPage = 4 -- Number of items visible at once
 }
 
 -- Background properties
 local stars = {}
 local numStars = 100
 local background = {
-    color = {0.1, 0.1, 0.2}, -- Default dark blue
+    color = {0.5, 0.8, 1}, -- Light blue sky
     starColor = {1, 1, 1},    -- Default white stars
     nebula = false,           -- Whether to show nebula effect
     nebulaColor = {0, 0, 0, 0}, -- RGBA for nebula
@@ -48,7 +50,8 @@ local player = {
     height = 32,
     speed = 200,
     health = 100,
-    maxHealth = 100
+    maxHealth = 100,
+    armor = 0 -- Added armor attribute
 }
 
 -- Gun properties
@@ -57,7 +60,17 @@ local gun = {
     width = 4,
     angle = 0,
     offsetX = 0,
-    offsetY = 0
+    offsetY = 0,
+    type = "default", -- Added gun type attribute
+    spread = 0, -- Added spread attribute
+    projectilesPerShot = 1, -- Added projectilesPerShot attribute
+    cooldown = 0.5, -- Base cooldown between shots
+    lastShot = 0, -- Time of last shot
+    damageMultiplier = 1, -- Base damage multiplier
+    autoTarget = false, -- Auto-targeting enabled
+    plasmaDamage = 1, -- Base plasma damage
+    rocketDamage = 1, -- Base rocket damage
+    rocketSplash = 0 -- Base splash radius
 }
 
 -- Projectile properties
@@ -101,6 +114,112 @@ game.shopItems = {
         level = 0,
         effect = function()
             projectileSize = projectileSize + 1
+        end
+    },
+    {
+        name = "Shotgun",
+        cost = 300,
+        maxLevel = 1,
+        level = 0,
+        effect = function()
+            -- Change gun type to shotgun
+            gun.type = "shotgun"
+            gun.spread = 0.3 -- Spread angle in radians
+            gun.projectilesPerShot = 5
+        end
+    },
+    {
+        name = "Laser Gun",
+        cost = 400,
+        maxLevel = 1,
+        level = 0,
+        effect = function()
+            -- Change gun type to laser
+            gun.type = "laser"
+            projectileSpeed = 800 -- Faster projectiles
+            projectileSize = 2 -- Thinner projectiles
+        end
+    },
+    {
+        name = "Heavy Armor",
+        cost = 250,
+        maxLevel = 1,
+        level = 0,
+        effect = function()
+            -- Add armor that reduces damage
+            player.armor = 0.5 -- Reduces damage by 50%
+        end
+    },
+    {
+        name = "Rapid Fire",
+        cost = 350,
+        maxLevel = 3,
+        level = 0,
+        effect = function()
+            -- Increase fire rate by reducing cooldown
+            if not gun.cooldown then gun.cooldown = 0.5 end
+            gun.cooldown = gun.cooldown * 0.7 -- Reduce cooldown by 30% each level
+        end
+    },
+    {
+        name = "Double Damage",
+        cost = 450,
+        maxLevel = 2,
+        level = 0,
+        effect = function()
+            -- Double the damage of projectiles
+            if not gun.damageMultiplier then gun.damageMultiplier = 1 end
+            gun.damageMultiplier = gun.damageMultiplier * 2
+        end
+    },
+    {
+        name = "Plasma Cannon",
+        cost = 600,
+        maxLevel = 1,
+        level = 0,
+        effect = function()
+            -- Change gun type to plasma
+            gun.type = "plasma"
+            projectileSpeed = 600
+            projectileSize = 6
+            gun.projectilesPerShot = 1
+            gun.plasmaDamage = 3 -- Each plasma shot does 3 damage
+        end
+    },
+    {
+        name = "Rocket Launcher",
+        cost = 500,
+        maxLevel = 1,
+        level = 0,
+        effect = function()
+            -- Change gun type to rocket
+            gun.type = "rocket"
+            projectileSpeed = 300
+            projectileSize = 8
+            gun.projectilesPerShot = 1
+            gun.rocketDamage = 5 -- Each rocket does 5 damage
+            gun.rocketSplash = 100 -- Splash radius
+        end
+    },
+    {
+        name = "Shield Generator",
+        cost = 400,
+        maxLevel = 1,
+        level = 0,
+        effect = function()
+            -- Add a shield that blocks one hit
+            player.shield = true
+            player.shieldHealth = 1
+        end
+    },
+    {
+        name = "Auto-Targeting",
+        cost = 550,
+        maxLevel = 1,
+        level = 0,
+        effect = function()
+            -- Enable auto-targeting for projectiles
+            gun.autoTarget = true
         end
     }
 }
@@ -225,32 +344,8 @@ end
 
 -- Update background based on wave
 function updateBackground()
-    local waveType = game.wave % 4 -- Cycle through 4 different backgrounds
-    
-    if waveType == 0 then
-        -- Deep space (dark blue)
-        background.color = {0.1, 0.1, 0.2}
-        background.starColor = {1, 1, 1}
-        background.nebula = false
-    elseif waveType == 1 then
-        -- Nebula (purple)
-        background.color = {0.2, 0.1, 0.3}
-        background.starColor = {0.8, 0.6, 1}
-        background.nebula = true
-        background.nebulaColor = {0.4, 0.2, 0.6, 0.3}
-    elseif waveType == 2 then
-        -- Red space (danger zone)
-        background.color = {0.3, 0.1, 0.1}
-        background.starColor = {1, 0.8, 0.8}
-        background.nebula = true
-        background.nebulaColor = {0.6, 0.2, 0.2, 0.3}
-    else
-        -- Green space (alien zone)
-        background.color = {0.1, 0.3, 0.2}
-        background.starColor = {0.8, 1, 0.8}
-        background.nebula = true
-        background.nebulaColor = {0.2, 0.6, 0.3, 0.3}
-    end
+    -- Keep the light blue sky color
+    background.color = {0.5, 0.8, 1}
 end
 
 -- Update ground based on wave
@@ -272,14 +367,63 @@ end
 
 -- Create a new projectile
 function createProjectile()
-    local projectile = {
-        x = player.x + gun.offsetX,
-        y = player.y + gun.offsetY,
-        size = projectileSize,
-        speed = projectileSpeed,
-        angle = gun.angle
-    }
-    table.insert(projectiles, projectile)
+    -- Check cooldown
+    if love.timer.getTime() - gun.lastShot < gun.cooldown then
+        return
+    end
+    gun.lastShot = love.timer.getTime()
+
+    if gun.type == "shotgun" then
+        -- Create multiple projectiles with spread
+        for i = 1, gun.projectilesPerShot do
+            local spread = (i - (gun.projectilesPerShot + 1) / 2) * gun.spread
+            local projectile = {
+                x = player.x + gun.offsetX,
+                y = player.y + gun.offsetY,
+                size = projectileSize,
+                speed = projectileSpeed,
+                angle = gun.angle + spread,
+                damage = 1 * gun.damageMultiplier,
+                type = "default"
+            }
+            table.insert(projectiles, projectile)
+        end
+    elseif gun.type == "plasma" then
+        local projectile = {
+            x = player.x + gun.offsetX,
+            y = player.y + gun.offsetY,
+            size = projectileSize,
+            speed = projectileSpeed,
+            angle = gun.angle,
+            damage = gun.plasmaDamage * gun.damageMultiplier,
+            type = "plasma"
+        }
+        table.insert(projectiles, projectile)
+    elseif gun.type == "rocket" then
+        local projectile = {
+            x = player.x + gun.offsetX,
+            y = player.y + gun.offsetY,
+            size = projectileSize,
+            speed = projectileSpeed,
+            angle = gun.angle,
+            damage = gun.rocketDamage * gun.damageMultiplier,
+            type = "rocket",
+            splash = gun.rocketSplash
+        }
+        table.insert(projectiles, projectile)
+    else
+        -- Create single projectile
+        local projectile = {
+            x = player.x + gun.offsetX,
+            y = player.y + gun.offsetY,
+            size = projectileSize,
+            speed = projectileSpeed,
+            angle = gun.angle,
+            damage = 1 * gun.damageMultiplier,
+            type = "default"
+        }
+        table.insert(projectiles, projectile)
+    end
 end
 
 -- Create a new monster
@@ -350,6 +494,31 @@ function love.update(dt)
         -- Update projectiles
         for i = #projectiles, 1, -1 do
             local p = projectiles[i]
+            
+            -- Auto-targeting logic
+            if gun.autoTarget and p.type == "default" then
+                -- Find closest monster
+                local closestMonster = nil
+                local closestDist = math.huge
+                for _, m in ipairs(monsters) do
+                    local dx = m.x - p.x
+                    local dy = m.y - p.y
+                    local dist = math.sqrt(dx * dx + dy * dy)
+                    if dist < closestDist then
+                        closestDist = dist
+                        closestMonster = m
+                    end
+                end
+                
+                -- Adjust projectile angle towards closest monster
+                if closestMonster then
+                    local targetAngle = math.atan2(closestMonster.y - p.y, closestMonster.x - p.x)
+                    local angleDiff = targetAngle - p.angle
+                    -- Smoothly adjust angle
+                    p.angle = p.angle + angleDiff * dt * 5
+                end
+            end
+            
             -- Move projectile
             p.x = p.x + math.cos(p.angle) * p.speed * dt
             p.y = p.y + math.sin(p.angle) * p.speed * dt
@@ -360,24 +529,31 @@ function love.update(dt)
                 if checkCollision(p.x, p.y, p.size, m.x, m.y, m.size) then
                     -- Remove projectile
                     table.remove(projectiles, i)
-                    -- Damage monster
-                    m.health = m.health - 1
-                    if m.health <= 0 then
-                        table.remove(monsters, j)
-                        game.score = game.score + 100
-                        game.monstersKilled = game.monstersKilled + 1
-                        
-                        -- Check if wave is complete
-                        if game.monstersKilled >= game.monstersPerWave then
-                            game.wave = game.wave + 1
-                            game.monstersKilled = 0
-                            -- Clear remaining monsters
-                            monsters = {}
-                            -- Update background and ground for new wave
-                            updateBackground()
-                            updateGround()
-                            -- Add coins for completing wave
-                            game.coins = game.coins + 50
+                    
+                    -- Apply damage based on projectile type
+                    if p.type == "rocket" then
+                        -- Apply splash damage to nearby monsters
+                        for k = #monsters, 1, -1 do
+                            local splashMonster = monsters[k]
+                            local dx = splashMonster.x - p.x
+                            local dy = splashMonster.y - p.y
+                            local dist = math.sqrt(dx * dx + dy * dy)
+                            if dist <= p.splash then
+                                splashMonster.health = splashMonster.health - p.damage
+                                if splashMonster.health <= 0 then
+                                    table.remove(monsters, k)
+                                    game.score = game.score + 100
+                                    game.monstersKilled = game.monstersKilled + 1
+                                end
+                            end
+                        end
+                    else
+                        -- Normal damage
+                        m.health = m.health - p.damage
+                        if m.health <= 0 then
+                            table.remove(monsters, j)
+                            game.score = game.score + 100
+                            game.monstersKilled = game.monstersKilled + 1
                         end
                     end
                     break
@@ -405,7 +581,12 @@ function love.update(dt)
             -- Check collision with player
             if checkCollision(player.x + player.width/2, player.y + player.height/2, player.width/2,
                             m.x, m.y, m.size) then
-                player.health = player.health - 20
+                -- Apply damage reduction if armor is equipped
+                local damage = 20
+                if player.armor then
+                    damage = damage * (1 - player.armor)
+                end
+                player.health = player.health - damage
                 table.remove(monsters, i)
                 if player.health <= 0 then
                     game.state = "gameover"
@@ -434,7 +615,7 @@ function love.draw()
         love.graphics.printf("8bitShooty", 0, love.graphics.getHeight()/2 - 50, love.graphics.getWidth(), "center")
         love.graphics.printf("Press SPACE to start", 0, love.graphics.getHeight()/2, love.graphics.getWidth(), "center")
     elseif game.state == "playing" then
-        -- Draw background
+        -- Draw background (sky)
         love.graphics.setColor(background.color)
         love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), love.graphics.getHeight())
         
@@ -532,7 +713,7 @@ function love.draw()
         end
         
         -- Draw grass
-        love.graphics.setColor(0.2, 0.5, 0.2)
+        love.graphics.setColor(0.2, 0.8, 0.2) -- Brighter green for grass
         for _, blade in ipairs(ground.grass) do
             love.graphics.rectangle("fill", blade.x, 
                                   love.graphics.getHeight() - ground.height,
@@ -540,7 +721,7 @@ function love.draw()
         end
         
         -- Draw ground
-        love.graphics.setColor(0.3, 0.3, 0.3)
+        love.graphics.setColor(0.4, 0.6, 0.2) -- Darker green for ground
         love.graphics.rectangle("fill", 0, love.graphics.getHeight() - ground.height,
                               love.graphics.getWidth(), ground.height)
         
@@ -637,9 +818,27 @@ function love.draw()
         end
         
         -- Draw projectiles
-        love.graphics.setColor(1, 1, 0)
         for _, p in ipairs(projectiles) do
-            love.graphics.circle("fill", p.x, p.y, p.size)
+            if p.type == "plasma" then
+                -- Draw plasma projectile
+                love.graphics.setColor(0, 1, 1, 0.8) -- Cyan color
+                love.graphics.circle("fill", p.x, p.y, p.size)
+                -- Add glow effect
+                love.graphics.setColor(0, 1, 1, 0.3)
+                love.graphics.circle("fill", p.x, p.y, p.size * 2)
+            elseif p.type == "rocket" then
+                -- Draw rocket projectile
+                love.graphics.setColor(1, 0.5, 0) -- Orange color
+                love.graphics.circle("fill", p.x, p.y, p.size)
+                -- Add trail effect
+                love.graphics.setColor(1, 0.3, 0, 0.3)
+                love.graphics.circle("fill", p.x - math.cos(p.angle) * 10, 
+                                   p.y - math.sin(p.angle) * 10, p.size * 0.7)
+            else
+                -- Draw default projectile
+                love.graphics.setColor(1, 1, 0)
+                love.graphics.circle("fill", p.x, p.y, p.size)
+            end
         end
         
         -- Draw player
@@ -650,6 +849,15 @@ function love.draw()
             -- 8-bit style player
             love.graphics.push()
             love.graphics.translate(player.x + player.width/2, player.y + player.height/2)
+            
+            -- Draw armor if equipped
+            if player.armor then
+                love.graphics.setColor(0.6, 0.6, 0.6) -- Gray armor
+                love.graphics.rectangle("fill", -12, -12, 24, 24) -- Armor plate
+                love.graphics.setColor(0.4, 0.4, 0.4) -- Darker gray
+                love.graphics.rectangle("fill", -10, -10, 20, 20) -- Inner armor
+            end
+            
             -- Body (blue)
             love.graphics.setColor(0.2, 0.4, 0.8)
             love.graphics.rectangle("fill", -8, -8, 16, 16)
@@ -683,18 +891,34 @@ function love.draw()
             love.graphics.draw(gunImg, 0, -gunImg:getHeight()/2, 0, 1, 1)
         else
             -- 8-bit style gun: draw pixel blocks
-            -- Gun body (dark gray)
-            love.graphics.setColor(0.2, 0.2, 0.2)
-            love.graphics.rectangle("fill", 0, -3, 16, 6) -- main body
-            -- Gun barrel (light gray)
-            love.graphics.setColor(0.7, 0.7, 0.7)
-            love.graphics.rectangle("fill", 16, -2, 8, 4) -- barrel
-            -- Gun grip (brown)
-            love.graphics.setColor(0.4, 0.2, 0)
-            love.graphics.rectangle("fill", 2, 3, 4, 5) -- grip
-            -- Gun highlight (white)
-            love.graphics.setColor(1, 1, 1)
-            love.graphics.rectangle("fill", 12, -2, 2, 2) -- highlight
+            if gun.type == "shotgun" then
+                -- Shotgun design
+                love.graphics.setColor(0.3, 0.3, 0.3) -- Dark gray
+                love.graphics.rectangle("fill", 0, -4, 20, 8) -- Wider body
+                love.graphics.setColor(0.7, 0.7, 0.7) -- Light gray
+                love.graphics.rectangle("fill", 20, -3, 12, 6) -- Wider barrel
+                love.graphics.setColor(0.4, 0.2, 0) -- Brown
+                love.graphics.rectangle("fill", 4, 4, 6, 6) -- Wider grip
+            elseif gun.type == "laser" then
+                -- Laser gun design
+                love.graphics.setColor(0.2, 0.2, 0.2) -- Dark gray
+                love.graphics.rectangle("fill", 0, -3, 16, 6) -- Body
+                love.graphics.setColor(0.8, 0.2, 0.2) -- Red
+                love.graphics.rectangle("fill", 16, -2, 12, 4) -- Laser barrel
+                love.graphics.setColor(0.4, 0.2, 0) -- Brown
+                love.graphics.rectangle("fill", 2, 3, 4, 5) -- Grip
+                -- Laser sight
+                love.graphics.setColor(0, 1, 0) -- Green
+                love.graphics.rectangle("fill", 12, -1, 2, 2)
+            else
+                -- Default gun design
+                love.graphics.setColor(0.2, 0.2, 0.2) -- Dark gray
+                love.graphics.rectangle("fill", 0, -3, 16, 6) -- Body
+                love.graphics.setColor(0.7, 0.7, 0.7) -- Light gray
+                love.graphics.rectangle("fill", 16, -2, 8, 4) -- Barrel
+                love.graphics.setColor(0.4, 0.2, 0) -- Brown
+                love.graphics.rectangle("fill", 2, 3, 4, 5) -- Grip
+            end
         end
         love.graphics.pop()
         
@@ -738,51 +962,19 @@ function love.draw()
         love.graphics.setColor(1, 1, 1)
         love.graphics.print("x " .. game.coins, 45, 25)
         
-        -- Draw shop items
-        local y = 150
-        for i, item in ipairs(game.shopItems) do
-            -- Draw item box
-            love.graphics.setColor(0.2, 0.2, 0.3)
-            love.graphics.rectangle("fill", 100, y, 600, 80)
-            
-            -- Draw item name and level
-            love.graphics.setColor(1, 1, 1)
-            love.graphics.print(item.name .. " (Level " .. item.level .. "/" .. item.maxLevel .. ")", 120, y + 20)
-            
-            -- Draw cost
-            if item.level < item.maxLevel then
-                love.graphics.setColor(1, 0.8, 0)
-                love.graphics.circle("fill", 120, y + 50, 8)
-                love.graphics.setColor(1, 1, 1)
-                love.graphics.print("x " .. item.cost, 135, y + 45)
-                
-                -- Draw buy button
-                if game.coins >= item.cost then
-                    love.graphics.setColor(0.2, 0.6, 0.2)
-                else
-                    love.graphics.setColor(0.4, 0.4, 0.4)
-                end
-                love.graphics.rectangle("fill", 500, y + 20, 100, 40)
-                love.graphics.setColor(1, 1, 1)
-                love.graphics.printf("Buy", 500, y + 30, 100, "center")
-            else
-                love.graphics.setColor(0.5, 0.5, 0.5)
-                love.graphics.printf("MAX LEVEL", 500, y + 30, 100, "center")
-            end
-            
-            y = y + 100
-        end
+        -- Draw shop items using the new function
+        drawShopItems()
         
         -- Draw continue button
         love.graphics.setColor(0.2, 0.2, 0.6)
-        love.graphics.rectangle("fill", love.graphics.getWidth()/2 - 100, y + 50, 200, 50)
+        love.graphics.rectangle("fill", love.graphics.getWidth()/2 - 100, love.graphics.getHeight() - 100, 200, 50)
         love.graphics.setColor(1, 1, 1)
-        love.graphics.printf("Continue", love.graphics.getWidth()/2 - 100, y + 65, 200, "center")
+        love.graphics.printf("Continue", love.graphics.getWidth()/2 - 100, love.graphics.getHeight() - 85, 200, "center")
         
         -- Draw feedback message
         if game.shopFeedback.timer > 0 then
             love.graphics.setColor(game.shopFeedback.color)
-            love.graphics.printf(game.shopFeedback.message, 0, y + 120, love.graphics.getWidth(), "center")
+            love.graphics.printf(game.shopFeedback.message, 0, love.graphics.getHeight() - 40, love.graphics.getWidth(), "center")
         end
     end
 end
@@ -811,6 +1003,12 @@ function love.keypressed(key)
             updateBackground()
             initializeGround()
         end
+    elseif game.state == "shop" then
+        if key == "up" then
+            game.shopScroll = math.max(0, game.shopScroll - 1)
+        elseif key == "down" then
+            game.shopScroll = math.min(#game.shopItems - game.itemsPerPage, game.shopScroll + 1)
+        end
     end
 end
 
@@ -822,7 +1020,27 @@ function love.mousepressed(x, y, button)
         elseif game.state == "shop" then
             -- Check shop item purchases
             local itemY = 150
-            for i, item in ipairs(game.shopItems) do
+            local startIndex = game.shopScroll + 1
+            local endIndex = math.min(startIndex + game.itemsPerPage - 1, #game.shopItems)
+            
+            -- Check scroll buttons first
+            if #game.shopItems > game.itemsPerPage then
+                -- Up button
+                if x >= 720 and x <= 760 and y >= 150 and y <= 190 then
+                    game.shopScroll = math.max(0, game.shopScroll - 1)
+                    return
+                end
+                
+                -- Down button
+                if x >= 720 and x <= 760 and y >= itemY + (endIndex - startIndex) * 100 - 50 and y <= itemY + (endIndex - startIndex) * 100 - 10 then
+                    game.shopScroll = math.min(#game.shopItems - game.itemsPerPage, game.shopScroll + 1)
+                    return
+                end
+            end
+            
+            -- Check buy buttons for visible items
+            for i = startIndex, endIndex do
+                local item = game.shopItems[i]
                 if item.level < item.maxLevel then
                     -- Check buy button
                     if x >= 500 and x <= 600 and
@@ -871,5 +1089,72 @@ function purchaseShopItem(item)
         game.shopFeedback.timer = 2
         game.shopFeedback.color = {1, 0, 0} -- Red for error
         return false
+    end
+end
+
+-- Draw shop items
+function drawShopItems()
+    local y = 150
+    local startIndex = game.shopScroll + 1
+    local endIndex = math.min(startIndex + game.itemsPerPage - 1, #game.shopItems)
+    
+    -- Draw visible items
+    for i = startIndex, endIndex do
+        local item = game.shopItems[i]
+        -- Draw item box
+        love.graphics.setColor(0.2, 0.2, 0.3)
+        love.graphics.rectangle("fill", 100, y, 600, 80)
+        
+        -- Draw item name and level
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.print(item.name .. " (Level " .. item.level .. "/" .. item.maxLevel .. ")", 120, y + 20)
+        
+        -- Draw cost
+        if item.level < item.maxLevel then
+            love.graphics.setColor(1, 0.8, 0)
+            love.graphics.circle("fill", 120, y + 50, 8)
+            love.graphics.setColor(1, 1, 1)
+            love.graphics.print("x " .. item.cost, 135, y + 45)
+            
+            -- Draw buy button
+            if game.coins >= item.cost then
+                love.graphics.setColor(0.2, 0.6, 0.2)
+            else
+                love.graphics.setColor(0.4, 0.4, 0.4)
+            end
+            love.graphics.rectangle("fill", 500, y + 20, 100, 40)
+            love.graphics.setColor(1, 1, 1)
+            love.graphics.printf("Buy", 500, y + 30, 100, "center")
+        else
+            love.graphics.setColor(0.5, 0.5, 0.5)
+            love.graphics.printf("MAX LEVEL", 500, y + 30, 100, "center")
+        end
+        
+        y = y + 100
+    end
+    
+    -- Draw scroll buttons if there are more items than can fit on screen
+    if #game.shopItems > game.itemsPerPage then
+        -- Up button
+        love.graphics.setColor(0.3, 0.3, 0.4)
+        love.graphics.rectangle("fill", 720, 150, 40, 40)
+        love.graphics.setColor(1, 1, 1)
+        -- Draw up arrow
+        love.graphics.polygon("fill", 
+            740, 160, -- Top point
+            730, 180, -- Bottom left
+            750, 180  -- Bottom right
+        )
+        
+        -- Down button
+        love.graphics.setColor(0.3, 0.3, 0.4)
+        love.graphics.rectangle("fill", 720, y - 50, 40, 40)
+        love.graphics.setColor(1, 1, 1)
+        -- Draw down arrow
+        love.graphics.polygon("fill", 
+            740, y - 30, -- Bottom point
+            730, y - 50, -- Top left
+            750, y - 50  -- Top right
+        )
     end
 end 

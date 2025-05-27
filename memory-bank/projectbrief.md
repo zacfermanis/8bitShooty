@@ -1,45 +1,33 @@
-# 8bitShooty Project Brief
+# 8bitShooty - Project Brief
 
-## Project Overview
-8bitShooty is a retro-style vertical shooting game built with LÖVE (Love2D) engine. The game features a player-controlled ship at the bottom of the screen that can move left and right while shooting upward at enemies that descend from the top of the screen.
+## Overview
+8bitShooty is a vertical shooter game built with LÖVE framework, featuring retro-style graphics and modern gameplay mechanics. The game combines classic arcade shooting with RPG-like progression through an upgrade system.
 
 ## Core Requirements
-- Vertical shooter gameplay mechanics
-- 8-bit pixel art graphics
-- Engaging gameplay
-- Smooth controls
-- Progressive difficulty
-- Health system
-- Enemy collision detection
+1. Vertical shooter gameplay with player movement and shooting mechanics
+2. Multiple enemy types with different behaviors and appearances
+3. Wave-based progression system
+4. Shop system for purchasing upgrades and new weapons
+5. Retro-style graphics with modern effects
+6. Score and high score tracking
+7. Multiple weapon types and upgrades
 
-## Project Goals
-1. Create an entertaining vertical shooting game with retro aesthetics
-2. Implement core shooting mechanics with upward-only aiming
-3. Design engaging levels with descending enemy patterns
-4. Ensure smooth performance and responsive controls
-5. Implement health system and collision detection
-
-## Project Scope
-The project will focus on:
-- Core game mechanics
-  - Left/right movement
-  - Upward shooting
-  - Enemy spawning and patterns
-  - Health system
-  - Collision detection
-- Player controls and movement
-- Enemy behavior and patterns
-- Level design
-- Visual and audio effects
-- Score system
+## Technical Goals
+1. Smooth player movement and shooting mechanics
+2. Efficient collision detection
+3. Responsive controls
+4. Balanced difficulty progression
+5. Engaging upgrade system
+6. Visual feedback for all actions
+7. Performance optimization for particle effects
 
 ## Success Criteria
-- Smooth and responsive gameplay
-- Engaging shooting mechanics
-- Visually appealing 8-bit style graphics
-- Balanced difficulty progression
-- Replayable content
-- Clear health system feedback
-- Satisfying collision effects
+1. Smooth 60 FPS gameplay
+2. Intuitive controls
+3. Balanced difficulty curve
+4. Engaging progression system
+5. Clear visual feedback
+6. Multiple viable weapon strategies
+7. Replayability through different upgrade paths
 
 Note: This is an initial project brief. It will be updated as more specific requirements and goals are defined. 

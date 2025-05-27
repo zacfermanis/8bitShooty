@@ -1,5 +1,91 @@
 # System Patterns
 
+## Core Architecture
+
+### Game State Management
+- State machine pattern for game states (menu, playing, gameover, shop)
+- Central game state object containing:
+  - Current state
+  - Score
+  - Wave number
+  - Monster counts
+  - Shop data
+
+### Entity System
+- Player entity with:
+  - Position
+  - Health
+  - Speed
+  - Armor
+  - Shield
+- Projectile system with:
+  - Multiple types (default, plasma, rocket)
+  - Damage calculations
+  - Special effects
+- Monster system with:
+  - Different types (basic, armored, elite)
+  - Health scaling
+  - Speed scaling
+
+### Weapon System
+- Modular weapon types:
+  - Default gun
+  - Shotgun (spread)
+  - Laser gun (fast)
+  - Plasma cannon (high damage)
+  - Rocket launcher (splash)
+- Upgrade system:
+  - Damage multipliers
+  - Fire rate
+  - Auto-targeting
+
+## Design Patterns
+
+### Component Pattern
+- Entities composed of components:
+  - Position
+  - Health
+  - Movement
+  - Weapon
+  - Visual effects
+
+### Observer Pattern
+- Event system for:
+  - Score updates
+  - Health changes
+  - Wave completion
+  - Shop purchases
+
+### Factory Pattern
+- Projectile creation
+- Monster spawning
+- Shop item generation
+
+## Critical Paths
+
+### Combat Loop
+1. Player input
+2. Weapon firing
+3. Projectile creation
+4. Collision detection
+5. Damage application
+6. Score/coin updates
+
+### Shop System
+1. Wave completion
+2. Shop state transition
+3. Item display
+4. Purchase validation
+5. Upgrade application
+6. Return to game
+
+### Wave Progression
+1. Monster count tracking
+2. Wave completion check
+3. Difficulty scaling
+4. Background updates
+5. Shop access
+
 ## System Architecture
 1. Core Systems:
    - Game state management
