@@ -1,72 +1,146 @@
 # Progress
 
-## Completed Features
+## What Works
 1. Core Gameplay
-   - Player movement
-   - Basic shooting
-   - Enemy spawning
-   - Collision detection
-   - Health system
-   - Score tracking
-
-2. Weapon System
+   - Player movement and shooting
+   - Wave-based progression
+   - Shop system
    - Multiple weapon types
-   - Damage system
-   - Auto-targeting
-   - Special effects
-   - Upgrade system
+   - Auto-targeting system
 
-3. Shop System
-   - Multiple upgrades
-   - Weapon purchases
-   - Visual feedback
-   - Scrollable interface
-   - Purchase validation
+2. Visual Effects
+   - Blood particle system
+   - Death explosions
+   - Impact effects
+   - Directional blood spray
+   - Gravity-affected particles
+   - Flash effects
+   - Dynamic particle rotation
 
-4. Visual Systems
-   - Retro-style graphics
-   - Weapon effects
-   - Health indicators
-   - Shop interface
-   - Background elements
+3. Environment
+   - Dynamic background changes
+   - Wave-based color themes
+   - Building generation
+   - Ground and grass variations
+   - Nebula effects
 
-## In Progress
-1. Weapon Balance
-   - Testing damage values
-   - Adjusting fire rates
-   - Balancing costs
-   - Special effects tuning
-
-2. Shop Improvements
-   - Navigation optimization
-   - Visual feedback
-   - Upgrade paths
-   - Cost balancing
-
-3. Performance
-   - Effect optimization
-   - Memory management
-   - Frame rate stability
-   - Collision efficiency
-
-## Planned Features
-1. Sound System
-   - Weapon sounds
-   - Background music
-   - Effect sounds
-   - UI feedback
-
-2. Save System
-   - Progress saving
-   - High scores
-   - Upgrade persistence
-   - Settings storage
-
-3. Additional Content
-   - More weapons
+4. Zombie Types
+   - 25 unique zombie types
    - Special abilities
-   - Boss monsters
-   - Power-ups
+   - Custom animations
+   - Health and damage systems
+   - Score values
+
+5. Weapons
+   - Default gun
+   - Shotgun
+   - Laser gun
+   - Plasma cannon
+   - Rocket launcher
+   - Auto-targeting
+   - Damage multipliers
+
+## What's Left to Build
+1. Visual Enhancements
+   - More particle effect variations
+   - Screen shake system
+   - Weather effects
+   - More building variations
+   - Enhanced ground detail
+
+2. Gameplay Features
+   - Sound effects
+   - Save system
+   - More special abilities
+   - Additional weapon types
+   - Power-up system
+
+3. UI Improvements
+   - Better menu system
+   - Tutorial
+   - Achievement system
+   - Statistics tracking
+   - Settings menu
+
+4. Performance
+   - Particle optimization
+   - Memory management
+   - Loading system
+   - Asset preloading
+   - Performance settings
+
+## Current Status
+1. Active Development
+   - Enhancing visual effects
+   - Improving particle system
+   - Adding new zombie types
+   - Balancing weapons
+   - Optimizing performance
+
+2. Recent Additions
+   - Blood particle system
+   - Death explosions
+   - Wave-based environment
+   - Special zombie abilities
+   - Auto-targeting system
+
+3. Known Issues
+   - Particle performance with many effects
+   - Memory usage with long play sessions
+   - Occasional visual glitches
+   - Balance adjustments needed
+   - UI scaling issues
+
+## Evolution of Decisions
+1. Visual Effects
+   - Started with basic particles
+   - Added directional blood spray
+   - Implemented gravity effects
+   - Added flash effects
+   - Enhanced particle variety
+
+2. Gameplay
+   - Added wave system
+   - Implemented shop
+   - Created weapon types
+   - Added special abilities
+   - Introduced auto-targeting
+
+3. Environment
+   - Added dynamic backgrounds
+   - Implemented building system
+   - Created ground variations
+   - Added nebula effects
+   - Enhanced visual themes
+
+4. Performance
+   - Optimized particle system
+   - Improved memory management
+   - Enhanced update loops
+   - Added particle cleanup
+   - Implemented efficient rendering
+
+## Next Milestones
+1. Short Term
+   - Enhance particle effects
+   - Add sound system
+   - Implement save system
+   - Add more special abilities
+   - Optimize performance
+
+2. Medium Term
+   - Add weather effects
+   - Create tutorial
+   - Implement achievements
+   - Add more weapons
+   - Enhance UI system
+
+3. Long Term
+   - Add multiplayer
+   - Create level editor
+   - Implement mod support
+   - Add campaign mode
+   - Create expansion content
 
 ## Known Issues
 1. Performance
@@ -86,78 +160,23 @@
    - Feedback consistency
    - Style consistency
 
-## Next Milestones
-1. Complete weapon balance
-2. Implement sound system
-3. Add save functionality
-4. Optimize performance
-5. Add more content
-6. Polish visual effects
-7. Final balance pass
+## Planned Features
+1. Sound System
+   - Weapon sounds
+   - Background music
+   - Effect sounds
+   - UI feedback
 
-## What's Left to Build
-1. Game Features:
+2. Save System
+   - Progress saving
+   - High scores
+   - Upgrade persistence
+   - Settings storage
+
+3. Additional Content
+   - More weapons
+   - Special abilities
    - Boss monsters
    - Power-ups
-   - Special effects
-   - More shop items
-   - Achievement system
-
-2. Visual Improvements:
-   - More building details
-   - Enhanced particle effects
-   - Better visual feedback
-   - More monster types
-   - Improved animations
-
-3. Balance and Polish:
-   - Fine-tune difficulty
-   - Balance economy
-   - Optimize performance
-   - Add sound effects
-   - Improve UI/UX
-
-## Current Status
-1. Game State:
-   - Main gameplay loop complete
-   - Wave system implemented
-   - Shop system functional
-   - Visual environment enhanced
-   - Basic balance established
-
-2. Known Issues:
-   - None critical
-   - Some visual polish needed
-   - Balance may need adjustment
-   - Performance optimization pending
-
-3. Recent Achievements:
-   - Implemented wave system
-   - Added shop with upgrades
-   - Created dynamic environment
-   - Enhanced visual feedback
-   - Added coin economy
-
-## Evolution of Decisions
-1. Game Design:
-   - Started with basic shooter
-   - Added wave progression
-   - Implemented shop system
-   - Enhanced visual design
-   - Created persistent upgrades
-
-2. Technical Implementation:
-   - Built on LÖVE engine
-   - Added state management
-   - Implemented upgrade system
-   - Created visual effects
-   - Enhanced game systems
-
-3. Future Considerations:
-   - More content needed
-   - Balance adjustments
-   - Visual improvements
-   - Performance optimization
-   - Feature expansion
 
 Note: This document will be updated as development progresses and new features are implemented. 

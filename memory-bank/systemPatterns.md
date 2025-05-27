@@ -200,4 +200,172 @@
    - Visual effect expansion
    - Feature integration
 
+## Particle System Architecture
+- Hit particles (blood effects)
+- Death particles (explosions)
+- Special effect particles
+- Gravity-affected movement
+- Alpha-based transparency
+- Dynamic rotation system
+
+## Key Technical Decisions
+1. Particle Management
+   - Separate arrays for different particle types
+   - Efficient cleanup system
+   - Gravity-based movement
+   - Directional spawning
+   - Performance optimization
+
+2. Visual Effects
+   - 8-bit style graphics
+   - Dynamic particle systems
+   - Flash effects
+   - Impact feedback
+   - Environmental effects
+
+3. Game Systems
+   - Wave-based progression
+   - Shop economy
+   - Weapon upgrades
+   - Special abilities
+   - Auto-targeting
+
+## Design Patterns
+1. Particle System
+   ```lua
+   -- Particle creation
+   function createParticles(x, y, type, properties)
+       local particles = {}
+       -- Particle generation logic
+       return particles
+   end
+
+   -- Particle update
+   function updateParticles(particles, dt)
+       for i = #particles, 1, -1 do
+           local p = particles[i]
+           -- Update logic
+           if p.life <= 0 then
+               table.remove(particles, i)
+           end
+       end
+   end
+
+   -- Particle rendering
+   function drawParticles(particles)
+       for _, p in ipairs(particles) do
+           -- Drawing logic
+       end
+   end
+   ```
+
+2. Wave System
+   ```lua
+   -- Wave progression
+   function updateWave()
+       if monstersKilled >= monstersPerWave then
+           -- Wave completion logic
+           -- Environment updates
+           -- Difficulty scaling
+       end
+   end
+   ```
+
+3. Shop System
+   ```lua
+   -- Shop item purchase
+   function purchaseItem(item)
+       if canAfford(item) then
+           -- Purchase logic
+           -- Effect application
+           -- Feedback display
+       end
+   end
+   ```
+
+## Component Relationships
+1. Particle System
+   - Hit particles → Monster entities
+   - Death particles → Monster entities
+   - Special particles → Ability system
+   - Environment particles → Background system
+
+2. Game Systems
+   - Wave system → Monster spawning
+   - Shop system → Player upgrades
+   - Weapon system → Projectile creation
+   - Ability system → Special effects
+
+3. Visual Systems
+   - Particle effects → Game feedback
+   - Environment → Wave progression
+   - UI elements → Game state
+   - Effects → Player actions
+
+## Critical Implementation Paths
+1. Particle System
+   - Particle creation
+   - Movement calculation
+   - Gravity application
+   - Rotation handling
+   - Cleanup management
+
+2. Wave Progression
+   - Wave completion check
+   - Environment updates
+   - Difficulty scaling
+   - Reward distribution
+   - State transitions
+
+3. Shop System
+   - Item availability
+   - Purchase validation
+   - Effect application
+   - UI updates
+   - Feedback display
+
+## Performance Considerations
+1. Particle Optimization
+   - Limit particle count
+   - Efficient cleanup
+   - Batch rendering
+   - Memory management
+   - Update frequency control
+
+2. Game Systems
+   - Entity pooling
+   - Update batching
+   - State caching
+   - Memory optimization
+   - Render optimization
+
+3. Visual Effects
+   - Effect culling
+   - Particle limits
+   - Render batching
+   - Memory management
+   - Update frequency
+
+## Future Considerations
+1. System Expansion
+   - More particle types
+   - Enhanced effects
+   - Additional abilities
+   - New weapons
+   - Environment features
+
+2. Performance Improvements
+   - Particle optimization
+   - Memory management
+   - Render efficiency
+   - Update batching
+   - State caching
+
+3. Feature Additions
+   - Weather effects
+   - More special abilities
+   - Additional weapons
+   - Enhanced UI
+   - Save system
+
 Note: This document will be updated as the technical architecture evolves and new patterns are implemented. 
