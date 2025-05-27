@@ -39,7 +39,9 @@ local ground = {
     buildings = {},
     grass = {},
     numBuildings = 5,
-    numGrass = 50
+    numGrass = 50,
+    color = {0.4, 0.6, 0.2}, -- Green
+    grassColor = {0.2, 0.8, 0.2} -- Bright green
 }
 
 -- Player properties
@@ -64,13 +66,18 @@ local gun = {
     type = "default", -- Added gun type attribute
     spread = 0, -- Added spread attribute
     projectilesPerShot = 1, -- Added projectilesPerShot attribute
-    cooldown = 0.5, -- Base cooldown between shots
+    cooldown = 0.1, -- Reduced base cooldown between shots for faster shooting
     lastShot = 0, -- Time of last shot
     damageMultiplier = 1, -- Base damage multiplier
     autoTarget = false, -- Auto-targeting enabled
     plasmaDamage = 1, -- Base plasma damage
     rocketDamage = 1, -- Base rocket damage
-    rocketSplash = 0 -- Base splash radius
+    rocketSplash = 0, -- Base splash radius
+    reloadTime = 0.5, -- Added reload time
+    ammo = 10, -- Added ammo count
+    maxAmmo = 10, -- Added max ammo
+    isReloading = false, -- Added reloading state
+    reloadStartTime = 0 -- Added reload start time
 }
 
 -- Projectile properties
@@ -85,6 +92,40 @@ local monsterSpawnInterval = 2 -- seconds
 local monsterSpeed = 100
 local monsterSize = 30
 local monsterHealth = 5 -- Increased base health
+
+-- Monster types
+local monsterTypes = {
+    -- Basic monsters (1-10)
+    {name = "Zombie", health = 5, speed = 100, size = 30, color = {0.2, 0.4, 0.2}, score = 100},
+    {name = "Fast Zombie", health = 3, speed = 150, size = 25, color = {0.3, 0.5, 0.3}, score = 150},
+    {name = "Tank Zombie", health = 10, speed = 70, size = 35, color = {0.4, 0.3, 0.2}, score = 200},
+    {name = "Swarm Zombie", health = 2, speed = 120, size = 20, color = {0.2, 0.3, 0.4}, score = 75},
+    {name = "Brute Zombie", health = 8, speed = 90, size = 40, color = {0.5, 0.2, 0.2}, score = 175},
+    {name = "Crawler", health = 4, speed = 130, size = 25, color = {0.3, 0.2, 0.3}, score = 125},
+    {name = "Runner", health = 3, speed = 160, size = 22, color = {0.4, 0.4, 0.2}, score = 150},
+    {name = "Stalker", health = 6, speed = 110, size = 28, color = {0.2, 0.2, 0.4}, score = 175},
+    {name = "Bruiser", health = 12, speed = 80, size = 38, color = {0.5, 0.3, 0.2}, score = 225},
+    {name = "Scout", health = 2, speed = 180, size = 20, color = {0.3, 0.4, 0.3}, score = 100},
+    
+    -- Special monsters (11-20)
+    {name = "Spitter", health = 4, speed = 90, size = 25, color = {0.4, 0.2, 0.4}, score = 200, special = "spit"},
+    {name = "Exploder", health = 5, speed = 70, size = 30, color = {0.5, 0.2, 0.2}, score = 250, special = "explode"},
+    {name = "Shield Zombie", health = 8, speed = 85, size = 32, color = {0.3, 0.3, 0.5}, score = 225, special = "shield"},
+    {name = "Leaper", health = 6, speed = 100, size = 28, color = {0.4, 0.4, 0.3}, score = 200, special = "leap"},
+    {name = "Screamer", health = 3, speed = 95, size = 26, color = {0.5, 0.3, 0.3}, score = 175, special = "scream"},
+    {name = "Toxic Zombie", health = 7, speed = 80, size = 30, color = {0.2, 0.5, 0.2}, score = 225, special = "toxic"},
+    {name = "Armored Zombie", health = 15, speed = 60, size = 35, color = {0.4, 0.4, 0.4}, score = 300, special = "armor"},
+    {name = "Hunter", health = 5, speed = 140, size = 27, color = {0.3, 0.2, 0.2}, score = 250, special = "hunt"},
+    {name = "Bomber", health = 4, speed = 75, size = 28, color = {0.5, 0.1, 0.1}, score = 275, special = "bomb"},
+    {name = "Titan", health = 20, speed = 50, size = 45, color = {0.6, 0.3, 0.2}, score = 400, special = "titan"},
+    
+    -- Elite monsters (21-25)
+    {name = "Necromancer", health = 12, speed = 85, size = 32, color = {0.4, 0.2, 0.5}, score = 500, special = "summon"},
+    {name = "Behemoth", health = 25, speed = 60, size = 50, color = {0.5, 0.2, 0.3}, score = 600, special = "charge"},
+    {name = "Plague Bearer", health = 15, speed = 75, size = 35, color = {0.2, 0.5, 0.3}, score = 550, special = "plague"},
+    {name = "Shadow", health = 8, speed = 160, size = 28, color = {0.2, 0.2, 0.2}, score = 450, special = "teleport"},
+    {name = "Abomination", health = 30, speed = 55, size = 55, color = {0.6, 0.2, 0.2}, score = 750, special = "rage"}
+}
 
 -- Shop items (moved after player definition)
 game.shopItems = {
@@ -224,6 +265,14 @@ game.shopItems = {
     }
 }
 
+-- Animation states
+local ANIMATION_STATES = {
+    IDLE = "idle",
+    ATTACK = "attack",
+    DEATH = "death",
+    SPECIAL = "special" -- New special attack state
+}
+
 function safeLoadImage(path)
     local ok, img = pcall(love.graphics.newImage, path)
     if ok then return img else return nil end
@@ -320,7 +369,7 @@ function initializeBackgroundBuildings()
     for i = 1, numBuildings do
         local building = {
             x = love.math.random(0, love.graphics.getWidth()),
-            y = love.math.random(0, love.graphics.getHeight() - ground.height - 200),
+            y = love.graphics.getHeight() - ground.height - love.math.random(150, 250), -- Position buildings to touch grass
             width = love.math.random(60, 100),
             height = love.math.random(150, 250),
             damage = love.math.random(0, 100) / 100,
@@ -344,33 +393,86 @@ end
 
 -- Update background based on wave
 function updateBackground()
-    -- Keep the light blue sky color
-    background.color = {0.5, 0.8, 1}
+    -- Change sky color based on wave
+    local waveType = game.wave % 4
+    if waveType == 0 then
+        -- Day time
+        background.color = {0.5, 0.8, 1} -- Light blue
+        background.starColor = {1, 1, 1} -- White stars
+        background.nebula = false
+    elseif waveType == 1 then
+        -- Sunset
+        background.color = {0.8, 0.4, 0.2} -- Orange
+        background.starColor = {1, 0.8, 0.6} -- Warm stars
+        background.nebula = true
+        background.nebulaColor = {0.8, 0.4, 0.2, 0.2} -- Orange nebula
+    elseif waveType == 2 then
+        -- Night
+        background.color = {0.1, 0.1, 0.2} -- Dark blue
+        background.starColor = {1, 1, 0.8} -- Bright stars
+        background.nebula = true
+        background.nebulaColor = {0.2, 0.1, 0.3, 0.3} -- Purple nebula
+    else
+        -- Dawn
+        background.color = {0.3, 0.5, 0.8} -- Blue-gray
+        background.starColor = {0.8, 0.8, 1} -- Cool stars
+        background.nebula = true
+        background.nebulaColor = {0.3, 0.5, 0.8, 0.2} -- Blue nebula
+    end
+    
+    -- Reinitialize background buildings for new wave
+    initializeBackgroundBuildings()
 end
 
 -- Update ground based on wave
 function updateGround()
     local waveType = game.wave % 4
     
-    -- Update building damage based on wave
-    for _, building in ipairs(ground.buildings) do
-        building.damage = math.min(1, (game.wave - 1) * 0.2) -- Increase damage up to 100%
-        
-        -- Randomly break windows based on damage
-        for _, window in ipairs(building.windows) do
-            if love.math.random() < building.damage then
-                window.lit = false
-            end
-        end
+    -- Change ground color based on wave
+    if waveType == 0 then
+        -- Normal grass
+        ground.color = {0.4, 0.6, 0.2} -- Green
+        ground.grassColor = {0.2, 0.8, 0.2} -- Bright green
+    elseif waveType == 1 then
+        -- Autumn
+        ground.color = {0.6, 0.4, 0.2} -- Brown
+        ground.grassColor = {0.8, 0.6, 0.2} -- Yellow
+    elseif waveType == 2 then
+        -- Night
+        ground.color = {0.2, 0.3, 0.1} -- Dark green
+        ground.grassColor = {0.3, 0.5, 0.2} -- Dark grass
+    else
+        -- Dawn
+        ground.color = {0.3, 0.5, 0.2} -- Blue-green
+        ground.grassColor = {0.4, 0.7, 0.3} -- Cool grass
     end
+    
+    -- Reinitialize ground elements for new wave
+    initializeGround()
 end
 
 -- Create a new projectile
 function createProjectile()
+    -- Check if reloading
+    if gun.isReloading then
+        return
+    end
+    
+    -- Check if out of ammo
+    if gun.ammo <= 0 then
+        -- Start reloading
+        gun.isReloading = true
+        gun.reloadStartTime = love.timer.getTime()
+        return
+    end
+    
     -- Check cooldown
     if love.timer.getTime() - gun.lastShot < gun.cooldown then
         return
     end
+    
+    -- Decrease ammo
+    gun.ammo = gun.ammo - 1
     gun.lastShot = love.timer.getTime()
 
     if gun.type == "shotgun" then
@@ -428,17 +530,219 @@ end
 
 -- Create a new monster
 function createMonster()
+    -- Randomly select monster type
+    local monsterType = monsterTypes[love.math.random(1, #monsterTypes)]
+    
+    -- Scale monster stats based on wave
+    local waveMultiplier = 1 + (game.wave - 1) * 0.2 -- 20% increase per wave
+    
     local monster = {
-        x = love.math.random(monsterSize, love.graphics.getWidth() - monsterSize),
-        y = -monsterSize,
-        size = monsterSize,
-        speed = monsterSpeed * (1 + (game.wave - 1) * 0.3), -- Increased speed scaling
-        health = monsterHealth + (game.wave - 1) * 2, -- Increased health scaling
-        maxHealth = monsterHealth + (game.wave - 1) * 2,
+        x = love.math.random(monsterType.size, love.graphics.getWidth() - monsterType.size),
+        y = -monsterType.size,
+        size = monsterType.size,
+        speed = monsterType.speed * waveMultiplier,
+        health = monsterType.health * waveMultiplier,
+        maxHealth = monsterType.health * waveMultiplier,
         angle = 0,
-        type = game.wave % 3 -- 0: basic, 1: armored, 2: elite
+        type = monsterType,
+        special = monsterType.special,
+        score = monsterType.score,
+        -- Animation properties
+        state = ANIMATION_STATES.IDLE,
+        animationTimer = 0,
+        frame = 1,
+        attackCooldown = 0,
+        deathTimer = 0,
+        shakeOffset = {x = 0, y = 0},
+        particles = {}, -- For blood and death effects
+        hitParticles = {}, -- Separate array for hit effects
+        specialAttackTimer = 0,
+        specialAttackCooldown = 3,
+        specialAttackParticles = {}
     }
+    
+    -- Add special abilities with enhanced properties
+    if monster.special == "spit" then
+        monster.spitCooldown = 0
+        monster.spitRange = 200
+        monster.spitParticles = {}
+    elseif monster.special == "explode" then
+        monster.explodeRadius = 100
+        monster.explodeParticles = {}
+    elseif monster.special == "shield" then
+        monster.shieldHealth = 5
+        monster.shieldParticles = {}
+    elseif monster.special == "leap" then
+        monster.leapCooldown = 0
+        monster.leapRange = 150
+        monster.leapParticles = {}
+    elseif monster.special == "scream" then
+        monster.screamCooldown = 0
+        monster.screamRange = 200
+        monster.screamParticles = {}
+    elseif monster.special == "toxic" then
+        monster.toxicRadius = 50
+        monster.toxicParticles = {}
+    elseif monster.special == "armor" then
+        monster.armor = 0.5
+        monster.armorParticles = {}
+    elseif monster.special == "hunt" then
+        monster.huntRange = 300
+        monster.huntParticles = {}
+    elseif monster.special == "bomb" then
+        monster.bombTimer = 5
+        monster.bombParticles = {}
+    elseif monster.special == "titan" then
+        monster.chargeCooldown = 0
+        monster.chargeRange = 200
+        monster.chargeParticles = {}
+    elseif monster.special == "summon" then
+        monster.summonCooldown = 0
+        monster.summonParticles = {}
+    elseif monster.special == "charge" then
+        monster.chargeCooldown = 0
+        monster.chargeSpeed = 200
+        monster.chargeParticles = {}
+    elseif monster.special == "plague" then
+        monster.plagueRadius = 100
+        monster.plagueParticles = {}
+    elseif monster.special == "teleport" then
+        monster.teleportCooldown = 0
+        monster.teleportRange = 200
+        monster.teleportParticles = {}
+    elseif monster.special == "rage" then
+        monster.rageThreshold = monster.health * 0.3
+        monster.rageActive = false
+        monster.rageParticles = {}
+    end
+    
     table.insert(monsters, monster)
+end
+
+-- Create special attack particles
+function createSpecialAttackParticles(monster, particleType)
+    local particles = {}
+    local numParticles = 8
+    
+    if particleType == "spit" then
+        -- Spit particles
+        for i = 1, numParticles do
+            table.insert(particles, {
+                x = 0,
+                y = 0,
+                vx = math.cos(monster.angle) * 200,
+                vy = math.sin(monster.angle) * 200,
+                size = 4,
+                color = {0.4, 0.2, 0.4},
+                life = 1,
+                rotation = 0,
+                rotationSpeed = 5
+            })
+        end
+    elseif particleType == "explode" then
+        -- Explosion particles
+        for i = 1, numParticles do
+            local angle = (i / numParticles) * math.pi * 2
+            table.insert(particles, {
+                x = 0,
+                y = 0,
+                vx = math.cos(angle) * 150,
+                vy = math.sin(angle) * 150,
+                size = 6,
+                color = {1, 0.5, 0},
+                life = 1,
+                rotation = 0,
+                rotationSpeed = 10
+            })
+        end
+    elseif particleType == "toxic" then
+        -- Toxic cloud particles
+        for i = 1, numParticles do
+            local angle = (i / numParticles) * math.pi * 2
+            table.insert(particles, {
+                x = 0,
+                y = 0,
+                vx = math.cos(angle) * 50,
+                vy = math.sin(angle) * 50,
+                size = 5,
+                color = {0.2, 0.5, 0.2},
+                life = 2,
+                rotation = 0,
+                rotationSpeed = 2
+            })
+        end
+    end
+    
+    return particles
+end
+
+-- Create blood particles
+function createBloodParticles(x, y, color)
+    local particles = {}
+    local numParticles = 12 -- Increased number of blood particles
+    
+    for i = 1, numParticles do
+        local angle = (i / numParticles) * math.pi * 2
+        local speed = love.math.random(100, 200) -- Increased speed
+        table.insert(particles, {
+            x = x,
+            y = y,
+            vx = math.cos(angle) * speed,
+            vy = math.sin(angle) * speed,
+            size = love.math.random(3, 6), -- Increased size
+            color = color or {0.8, 0.1, 0.1},
+            life = 0.8, -- Increased lifetime
+            rotation = love.math.random() * math.pi * 2,
+            rotationSpeed = love.math.random(-10, 10),
+            gravity = 500, -- Added gravity effect
+            alpha = 1 -- Added alpha for fade effect
+        })
+    end
+    
+    return particles
+end
+
+-- Create death particles
+function createDeathParticles(monster)
+    local numParticles = 30 -- Increased number of particles
+    for i = 1, numParticles do
+        local angle = (i / numParticles) * math.pi * 2
+        local speed = love.math.random(150, 300) -- Increased speed range
+        table.insert(monster.particles, {
+            x = 0,
+            y = 0,
+            vx = math.cos(angle) * speed,
+            vy = math.sin(angle) * speed,
+            size = love.math.random(4, 8), -- Increased size
+            color = monster.type.color,
+            life = 1.5, -- Increased lifetime
+            rotation = love.math.random() * math.pi * 2,
+            rotationSpeed = love.math.random(-15, 15),
+            gravity = 300 -- Added gravity effect
+        })
+    end
+    
+    -- Add blood particles to death effect
+    local bloodParticles = createBloodParticles(0, 0, {0.8, 0.1, 0.1})
+    for _, p in ipairs(bloodParticles) do
+        table.insert(monster.particles, p)
+    end
+    
+    -- Add explosion flash
+    for i = 1, 5 do
+        table.insert(monster.particles, {
+            x = 0,
+            y = 0,
+            vx = 0,
+            vy = 0,
+            size = monster.size * (1 + i * 0.5),
+            color = {1, 0.8, 0.2},
+            life = 0.3,
+            rotation = 0,
+            rotationSpeed = 0,
+            isFlash = true
+        })
+    end
 end
 
 -- Check collision between two circles
@@ -452,6 +756,39 @@ end
 -- Update game state
 function love.update(dt)
     if game.state == "playing" then
+        -- Check if wave is complete
+        if game.monstersKilled >= game.monstersPerWave then
+            -- Calculate coin reward based on wave number
+            local coinReward = 50 + (game.wave * 25) -- Base 50 coins + 25 per wave
+            game.coins = game.coins + coinReward
+            
+            -- Show coin reward message
+            game.waveFeedback = {
+                message = "+" .. coinReward .. " coins!",
+                timer = 2,
+                color = {1, 0.8, 0} -- Gold color
+            }
+            
+            game.wave = game.wave + 1
+            game.monstersKilled = 0
+            game.monstersPerWave = game.monstersPerWave + 5 -- Increase monsters per wave
+            updateBackground() -- Update scenery for new wave
+            updateGround() -- Update ground for new wave
+        end
+        
+        -- Update wave feedback timer
+        if game.waveFeedback and game.waveFeedback.timer > 0 then
+            game.waveFeedback.timer = game.waveFeedback.timer - dt
+        end
+        
+        -- Check reload status
+        if gun.isReloading then
+            if love.timer.getTime() - gun.reloadStartTime >= gun.reloadTime then
+                gun.ammo = gun.maxAmmo
+                gun.isReloading = false
+            end
+        end
+        
         -- Update stars
         for _, star in ipairs(stars) do
             star.y = star.y + star.speed * dt
@@ -495,30 +832,6 @@ function love.update(dt)
         for i = #projectiles, 1, -1 do
             local p = projectiles[i]
             
-            -- Auto-targeting logic
-            if gun.autoTarget and p.type == "default" then
-                -- Find closest monster
-                local closestMonster = nil
-                local closestDist = math.huge
-                for _, m in ipairs(monsters) do
-                    local dx = m.x - p.x
-                    local dy = m.y - p.y
-                    local dist = math.sqrt(dx * dx + dy * dy)
-                    if dist < closestDist then
-                        closestDist = dist
-                        closestMonster = m
-                    end
-                end
-                
-                -- Adjust projectile angle towards closest monster
-                if closestMonster then
-                    local targetAngle = math.atan2(closestMonster.y - p.y, closestMonster.x - p.x)
-                    local angleDiff = targetAngle - p.angle
-                    -- Smoothly adjust angle
-                    p.angle = p.angle + angleDiff * dt * 5
-                end
-            end
-            
             -- Move projectile
             p.x = p.x + math.cos(p.angle) * p.speed * dt
             p.y = p.y + math.sin(p.angle) * p.speed * dt
@@ -527,6 +840,21 @@ function love.update(dt)
             for j = #monsters, 1, -1 do
                 local m = monsters[j]
                 if checkCollision(p.x, p.y, p.size, m.x, m.y, m.size) then
+                    -- Calculate impact point relative to monster
+                    local impactX = p.x - m.x
+                    local impactY = p.y - m.y
+                    
+                    -- Create blood effect at impact point
+                    local bloodParticles = createBloodParticles(impactX, impactY, {0.8, 0.1, 0.1})
+                    for _, bp in ipairs(bloodParticles) do
+                        -- Adjust particle velocity based on projectile angle
+                        local angle = p.angle + love.math.random(-0.5, 0.5)
+                        local speed = love.math.random(100, 200)
+                        bp.vx = math.cos(angle) * speed
+                        bp.vy = math.sin(angle) * speed
+                        table.insert(m.hitParticles, bp)
+                    end
+                    
                     -- Remove projectile
                     table.remove(projectiles, i)
                     
@@ -539,6 +867,17 @@ function love.update(dt)
                             local dy = splashMonster.y - p.y
                             local dist = math.sqrt(dx * dx + dy * dy)
                             if dist <= p.splash then
+                                -- Create blood effect for splash damage
+                                local splashBlood = createBloodParticles(dx, dy, {0.8, 0.1, 0.1})
+                                for _, sbp in ipairs(splashBlood) do
+                                    -- Adjust particle velocity based on distance from explosion
+                                    local angle = math.atan2(dy, dx) + love.math.random(-0.5, 0.5)
+                                    local speed = love.math.random(100, 200)
+                                    sbp.vx = math.cos(angle) * speed
+                                    sbp.vy = math.sin(angle) * speed
+                                    table.insert(splashMonster.hitParticles, sbp)
+                                end
+                                
                                 splashMonster.health = splashMonster.health - p.damage
                                 if splashMonster.health <= 0 then
                                     table.remove(monsters, k)
@@ -570,10 +909,178 @@ function love.update(dt)
         -- Update monsters
         for i = #monsters, 1, -1 do
             local m = monsters[i]
+            
+            -- Update particles
+            for j = #m.particles, 1, -1 do
+                local p = m.particles[j]
+                p.x = p.x + p.vx * dt
+                p.y = p.y + p.vy * dt
+                
+                -- Apply gravity to particles
+                if p.gravity then
+                    p.vy = p.vy + p.gravity * dt
+                end
+                
+                p.life = p.life - dt
+                p.rotation = p.rotation + p.rotationSpeed * dt
+                
+                -- Remove dead particles
+                if p.life <= 0 then
+                    table.remove(m.particles, j)
+                end
+            end
+            
+            -- Update hit particles
+            for j = #m.hitParticles, 1, -1 do
+                local p = m.hitParticles[j]
+                p.x = p.x + p.vx * dt
+                p.y = p.y + p.vy * dt
+                
+                -- Apply gravity to hit particles
+                if p.gravity then
+                    p.vy = p.vy + p.gravity * dt
+                end
+                
+                p.life = p.life - dt
+                p.rotation = p.rotation + p.rotationSpeed * dt
+                
+                -- Remove dead hit particles
+                if p.life <= 0 then
+                    table.remove(m.hitParticles, j)
+                end
+            end
+            
+            -- Update animation timers
+            m.animationTimer = m.animationTimer + dt
+            if m.animationTimer >= 0.1 then -- 10 FPS animation
+                m.animationTimer = 0
+                m.frame = m.frame + 1
+                if m.frame > 4 then m.frame = 1 end
+            end
+            
+            -- Update attack cooldown
+            if m.attackCooldown > 0 then
+                m.attackCooldown = m.attackCooldown - dt
+            end
+            
+            -- Update special attack cooldown
+            if m.specialAttackCooldown > 0 then
+                m.specialAttackCooldown = m.specialAttackCooldown - dt
+            end
+            
+            -- Update special attack particles
+            if m.state == ANIMATION_STATES.SPECIAL then
+                m.specialAttackTimer = m.specialAttackTimer + dt
+                
+                -- Update particles based on monster type
+                if m.special == "spit" then
+                    for _, p in ipairs(m.spitParticles) do
+                        p.x = p.x + p.vx * dt
+                        p.y = p.y + p.vy * dt
+                        p.life = p.life - dt
+                        p.rotation = p.rotation + p.rotationSpeed * dt
+                    end
+                elseif m.special == "explode" then
+                    for _, p in ipairs(m.explodeParticles) do
+                        p.x = p.x + p.vx * dt
+                        p.y = p.y + p.vy * dt
+                        p.life = p.life - dt
+                        p.rotation = p.rotation + p.rotationSpeed * dt
+                    end
+                elseif m.special == "toxic" then
+                    for _, p in ipairs(m.toxicParticles) do
+                        p.x = p.x + p.vx * dt
+                        p.y = p.y + p.vy * dt
+                        p.life = p.life - dt
+                        p.rotation = p.rotation + p.rotationSpeed * dt
+                    end
+                end
+                
+                -- End special attack after duration
+                if m.specialAttackTimer >= 1 then
+                    m.state = ANIMATION_STATES.IDLE
+                    m.specialAttackTimer = 0
+                end
+            end
+            
+            -- Update death animation
+            if m.state == ANIMATION_STATES.DEATH then
+                m.deathTimer = m.deathTimer + dt
+                -- Update particles
+                for j = #m.particles, 1, -1 do
+                    local p = m.particles[j]
+                    p.x = p.x + p.vx * dt
+                    p.y = p.y + p.vy * dt
+                    
+                    -- Apply gravity to particles
+                    if p.gravity then
+                        p.vy = p.vy + p.gravity * dt
+                    end
+                    
+                    p.life = p.life - dt
+                    p.rotation = p.rotation + p.rotationSpeed * dt
+                    
+                    -- Remove dead particles
+                    if p.life <= 0 then
+                        table.remove(m.particles, j)
+                    end
+                end
+                -- Remove monster after death animation
+                if m.deathTimer >= 1 then
+                    table.remove(monsters, i)
+                    break
+                end
+            end
+            
+            -- Update shake effect
+            if m.state == ANIMATION_STATES.ATTACK then
+                m.shakeOffset.x = love.math.random(-2, 2)
+                m.shakeOffset.y = love.math.random(-2, 2)
+            else
+                m.shakeOffset.x = 0
+                m.shakeOffset.y = 0
+            end
+            
+            -- Update special abilities
+            if m.special == "spit" then
+                m.spitCooldown = math.max(0, m.spitCooldown - dt)
+            elseif m.special == "leap" then
+                m.leapCooldown = math.max(0, m.leapCooldown - dt)
+            elseif m.special == "scream" then
+                m.screamCooldown = math.max(0, m.screamCooldown - dt)
+            elseif m.special == "bomb" then
+                m.bombTimer = m.bombTimer - dt
+                if m.bombTimer <= 0 then
+                    -- Explode
+                    for j = #monsters, 1, -1 do
+                        local otherMonster = monsters[j]
+                        if j ~= i then
+                            local dx = otherMonster.x - m.x
+                            local dy = otherMonster.y - m.y
+                            local dist = math.sqrt(dx * dx + dy * dy)
+                            if dist <= 100 then
+                                otherMonster.health = otherMonster.health - 10
+                            end
+                        end
+                    end
+                    table.remove(monsters, i)
+                    break
+                end
+            elseif m.special == "titan" then
+                m.chargeCooldown = math.max(0, m.chargeCooldown - dt)
+            elseif m.special == "summon" then
+                m.summonCooldown = math.max(0, m.summonCooldown - dt)
+            elseif m.special == "charge" then
+                m.chargeCooldown = math.max(0, m.chargeCooldown - dt)
+            elseif m.special == "teleport" then
+                m.teleportCooldown = math.max(0, m.teleportCooldown - dt)
+            end
+            
             -- Calculate angle to player
             local playerCenterX = player.x + player.width/2
             local playerCenterY = player.y + player.height/2
             m.angle = math.atan2(playerCenterY - m.y, playerCenterX - m.x)
+            
             -- Move monster towards player
             m.x = m.x + math.cos(m.angle) * m.speed * dt
             m.y = m.y + math.sin(m.angle) * m.speed * dt
@@ -581,16 +1088,33 @@ function love.update(dt)
             -- Check collision with player
             if checkCollision(player.x + player.width/2, player.y + player.height/2, player.width/2,
                             m.x, m.y, m.size) then
-                -- Apply damage reduction if armor is equipped
-                local damage = 20
-                if player.armor then
-                    damage = damage * (1 - player.armor)
+                if m.attackCooldown <= 0 then
+                    -- Start attack animation
+                    m.state = ANIMATION_STATES.ATTACK
+                    m.attackCooldown = 0.5
+                    
+                    -- Apply damage reduction if armor is equipped
+                    local damage = 20
+                    if player.armor then
+                        damage = damage * (1 - player.armor)
+                    end
+                    if m.special == "armor" then
+                        damage = damage * 1.5 -- Armored zombies do more damage
+                    end
+                    player.health = player.health - damage
+                    
+                    if player.health <= 0 then
+                        game.state = "gameover"
+                    end
                 end
-                player.health = player.health - damage
-                table.remove(monsters, i)
-                if player.health <= 0 then
-                    game.state = "gameover"
-                end
+            end
+            
+            -- Check if monster should die
+            if m.health <= 0 and m.state ~= ANIMATION_STATES.DEATH then
+                m.state = ANIMATION_STATES.DEATH
+                createDeathParticles(m)
+                game.score = game.score + m.score
+                game.monstersKilled = game.monstersKilled + 1
             end
             
             -- Remove monsters that are off screen
@@ -713,7 +1237,7 @@ function love.draw()
         end
         
         -- Draw grass
-        love.graphics.setColor(0.2, 0.8, 0.2) -- Brighter green for grass
+        love.graphics.setColor(ground.grassColor or {0.2, 0.8, 0.2}) -- Use grass color or default
         for _, blade in ipairs(ground.grass) do
             love.graphics.rectangle("fill", blade.x, 
                                   love.graphics.getHeight() - ground.height,
@@ -721,100 +1245,361 @@ function love.draw()
         end
         
         -- Draw ground
-        love.graphics.setColor(0.4, 0.6, 0.2) -- Darker green for ground
+        love.graphics.setColor(ground.color or {0.4, 0.6, 0.2}) -- Use ground color or default
         love.graphics.rectangle("fill", 0, love.graphics.getHeight() - ground.height,
                               love.graphics.getWidth(), ground.height)
         
         -- Draw monsters
         for _, m in ipairs(monsters) do
+            -- Draw particles first (so they appear behind the monster)
+            for _, p in ipairs(m.particles) do
+                love.graphics.push()
+                love.graphics.translate(m.x + p.x, m.y + p.y)
+                love.graphics.rotate(p.rotation)
+                
+                if p.isFlash then
+                    -- Draw explosion flash
+                    love.graphics.setColor(p.color[1], p.color[2], p.color[3], p.life)
+                    love.graphics.circle("fill", 0, 0, p.size)
+                else
+                    -- Draw blood/death particle
+                    love.graphics.setColor(p.color[1], p.color[2], p.color[3], p.life)
+                    love.graphics.rectangle("fill", -p.size/2, -p.size/2, p.size, p.size)
+                    -- Add highlight
+                    love.graphics.setColor(1, 1, 1, p.life * 0.3)
+                    love.graphics.rectangle("fill", -p.size/4, -p.size/4, p.size/2, p.size/2)
+                end
+                
+                love.graphics.pop()
+            end
+            
+            -- Draw hit particles
+            for _, p in ipairs(m.hitParticles) do
+                love.graphics.push()
+                love.graphics.translate(m.x + p.x, m.y + p.y)
+                love.graphics.rotate(p.rotation)
+                
+                -- Draw blood particle
+                love.graphics.setColor(p.color[1], p.color[2], p.color[3], p.life)
+                love.graphics.rectangle("fill", -p.size/2, -p.size/2, p.size, p.size)
+                -- Add highlight
+                love.graphics.setColor(1, 1, 1, p.life * 0.3)
+                love.graphics.rectangle("fill", -p.size/4, -p.size/4, p.size/2, p.size/2)
+                
+                love.graphics.pop()
+            end
+            
             if zombieImg then
                 love.graphics.setColor(1, 1, 1)
                 love.graphics.draw(zombieImg, m.x, m.y, 0, m.size/zombieImg:getWidth()*2, m.size/zombieImg:getHeight()*2, zombieImg:getWidth()/2, zombieImg:getHeight()/2)
             else
-                -- 8-bit style monster with different types
+                -- 8-bit style monster
                 love.graphics.push()
-                love.graphics.translate(m.x, m.y)
+                love.graphics.translate(m.x + m.shakeOffset.x, m.y + m.shakeOffset.y)
                 
-                if m.type == 0 then
-                    -- Basic monster (green)
-                    -- Body
-                    love.graphics.setColor(0.2, 0.4, 0.2)
-                    love.graphics.rectangle("fill", -8, -8, 16, 16)
-                    -- Head
-                    love.graphics.setColor(0.3, 0.6, 0.3)
-                    love.graphics.rectangle("fill", -6, -12, 12, 8)
-                    -- Eyes
-                    love.graphics.setColor(0.8, 0.2, 0.2)
-                    love.graphics.rectangle("fill", -4, -10, 3, 3)
-                    love.graphics.rectangle("fill", 1, -10, 3, 3)
-                    -- Mouth
-                    love.graphics.setColor(0.1, 0.1, 0.1)
-                    love.graphics.rectangle("fill", -3, -5, 6, 2)
-                    -- Arms
-                    love.graphics.setColor(0.2, 0.3, 0.2)
-                    love.graphics.rectangle("fill", -12, -4, 4, 8)
-                    love.graphics.rectangle("fill", 8, -4, 4, 8)
-                elseif m.type == 1 then
-                    -- Armored monster (purple with armor)
-                    -- Body
-                    love.graphics.setColor(0.4, 0.2, 0.4)
-                    love.graphics.rectangle("fill", -8, -8, 16, 16)
-                    -- Head
-                    love.graphics.setColor(0.5, 0.3, 0.5)
-                    love.graphics.rectangle("fill", -6, -12, 12, 8)
-                    -- Eyes
-                    love.graphics.setColor(0.8, 0.8, 0.2)
-                    love.graphics.rectangle("fill", -4, -10, 3, 3)
-                    love.graphics.rectangle("fill", 1, -10, 3, 3)
-                    -- Mouth
-                    love.graphics.setColor(0.1, 0.1, 0.1)
-                    love.graphics.rectangle("fill", -3, -5, 6, 2)
-                    -- Arms
-                    love.graphics.setColor(0.3, 0.2, 0.3)
-                    love.graphics.rectangle("fill", -12, -4, 4, 8)
-                    love.graphics.rectangle("fill", 8, -4, 4, 8)
-                    -- Armor plates
-                    love.graphics.setColor(0.6, 0.6, 0.6)
-                    love.graphics.rectangle("fill", -10, -6, 20, 4)
-                    love.graphics.rectangle("fill", -8, -10, 16, 2)
+                if m.state == ANIMATION_STATES.DEATH then
+                    -- Draw death particles
+                    for _, p in ipairs(m.particles) do
+                        love.graphics.push()
+                        love.graphics.translate(p.x, p.y)
+                        love.graphics.rotate(p.rotation)
+                        
+                        -- Draw pixelated death particle
+                        love.graphics.setColor(p.color[1], p.color[2], p.color[3], p.life)
+                        love.graphics.rectangle("fill", -p.size/2, -p.size/2, p.size, p.size)
+                        love.graphics.setColor(1, 1, 1, p.life * 0.5)
+                        love.graphics.rectangle("fill", -p.size/4, -p.size/4, p.size/2, p.size/2)
+                        
+                        love.graphics.pop()
+                    end
+                elseif m.state == ANIMATION_STATES.SPECIAL then
+                    -- Draw special attack particles
+                    if m.special == "spit" then
+                        for _, p in ipairs(m.spitParticles) do
+                            love.graphics.push()
+                            love.graphics.translate(p.x, p.y)
+                            love.graphics.rotate(p.rotation)
+                            
+                            -- Draw spit projectile
+                            love.graphics.setColor(p.color[1], p.color[2], p.color[3], p.life)
+                            love.graphics.rectangle("fill", -p.size/2, -p.size/2, p.size, p.size)
+                            love.graphics.setColor(1, 1, 1, p.life * 0.3)
+                            love.graphics.rectangle("fill", -p.size/4, -p.size/4, p.size/2, p.size/2)
+                            
+                            love.graphics.pop()
+                        end
+                    elseif m.special == "explode" then
+                        for _, p in ipairs(m.explodeParticles) do
+                            love.graphics.push()
+                            love.graphics.translate(p.x, p.y)
+                            love.graphics.rotate(p.rotation)
+                            
+                            -- Draw explosion particle
+                            love.graphics.setColor(p.color[1], p.color[2], p.color[3], p.life)
+                            love.graphics.rectangle("fill", -p.size/2, -p.size/2, p.size, p.size)
+                            love.graphics.setColor(1, 0.8, 0, p.life * 0.5)
+                            love.graphics.rectangle("fill", -p.size/4, -p.size/4, p.size/2, p.size/2)
+                            
+                            love.graphics.pop()
+                        end
+                    elseif m.special == "toxic" then
+                        for _, p in ipairs(m.toxicParticles) do
+                            love.graphics.push()
+                            love.graphics.translate(p.x, p.y)
+                            love.graphics.rotate(p.rotation)
+                            
+                            -- Draw toxic cloud particle
+                            love.graphics.setColor(p.color[1], p.color[2], p.color[3], p.life * 0.5)
+                            love.graphics.rectangle("fill", -p.size/2, -p.size/2, p.size, p.size)
+                            love.graphics.setColor(0.3, 0.8, 0.3, p.life * 0.3)
+                            love.graphics.rectangle("fill", -p.size/4, -p.size/4, p.size/2, p.size/2)
+                            
+                            love.graphics.pop()
+                        end
+                    end
                 else
-                    -- Elite monster (red with spikes)
-                    -- Body
-                    love.graphics.setColor(0.6, 0.2, 0.2)
-                    love.graphics.rectangle("fill", -8, -8, 16, 16)
-                    -- Head
-                    love.graphics.setColor(0.7, 0.3, 0.3)
-                    love.graphics.rectangle("fill", -6, -12, 12, 8)
-                    -- Eyes
-                    love.graphics.setColor(1, 1, 1)
-                    love.graphics.rectangle("fill", -4, -10, 3, 3)
-                    love.graphics.rectangle("fill", 1, -10, 3, 3)
-                    -- Mouth
-                    love.graphics.setColor(0.1, 0.1, 0.1)
-                    love.graphics.rectangle("fill", -3, -5, 6, 2)
-                    -- Arms
-                    love.graphics.setColor(0.5, 0.2, 0.2)
-                    love.graphics.rectangle("fill", -12, -4, 4, 8)
-                    love.graphics.rectangle("fill", 8, -4, 4, 8)
-                    -- Spikes
-                    love.graphics.setColor(0.8, 0.8, 0.8)
-                    love.graphics.rectangle("fill", -8, -14, 4, 4)
-                    love.graphics.rectangle("fill", 4, -14, 4, 4)
-                    love.graphics.rectangle("fill", -10, -4, 4, 4)
-                    love.graphics.rectangle("fill", 6, -4, 4, 4)
+                    -- Draw monster sprite based on type
+                    if m.type.name == "Zombie" then
+                        -- Basic zombie with enhanced 8-bit style
+                        -- Body
+                        love.graphics.setColor(0.2, 0.4, 0.2)
+                        love.graphics.rectangle("fill", -6, -8, 12, 16)
+                        -- Shirt details
+                        love.graphics.setColor(0.1, 0.3, 0.1)
+                        love.graphics.rectangle("fill", -4, -4, 8, 8)
+                        -- Head
+                        love.graphics.setColor(0.3, 0.6, 0.3)
+                        love.graphics.rectangle("fill", -4, -12, 8, 6)
+                        -- Face details
+                        love.graphics.setColor(0.2, 0.5, 0.2)
+                        love.graphics.rectangle("fill", -3, -10, 6, 3)
+                        -- Eyes
+                        love.graphics.setColor(0.8, 0.2, 0.2)
+                        love.graphics.rectangle("fill", -3, -10, 2, 2)
+                        love.graphics.rectangle("fill", 1, -10, 2, 2)
+                        -- Mouth
+                        love.graphics.setColor(0.2, 0.3, 0.2)
+                        love.graphics.rectangle("fill", -2, -8, 4, 1)
+                        -- Arms
+                        love.graphics.setColor(0.2, 0.3, 0.2)
+                        love.graphics.rectangle("fill", -8, -4, 3, 6)
+                        love.graphics.rectangle("fill", 5, -4, 3, 6)
+                        -- Legs
+                        love.graphics.setColor(0.15, 0.25, 0.15)
+                        love.graphics.rectangle("fill", -4, 8, 3, 6)
+                        love.graphics.rectangle("fill", 1, 8, 3, 6)
+                        
+                    elseif m.type.name == "Fast Zombie" then
+                        -- Fast zombie with enhanced 8-bit style
+                        -- Body
+                        love.graphics.setColor(0.3, 0.5, 0.3)
+                        love.graphics.rectangle("fill", -6, -8, 12, 16)
+                        -- Shirt details
+                        love.graphics.setColor(0.2, 0.4, 0.2)
+                        love.graphics.rectangle("fill", -4, -4, 8, 8)
+                        -- Head
+                        love.graphics.setColor(0.4, 0.6, 0.4)
+                        love.graphics.rectangle("fill", -4, -12, 8, 6)
+                        -- Face details
+                        love.graphics.setColor(0.3, 0.5, 0.3)
+                        love.graphics.rectangle("fill", -3, -10, 6, 3)
+                        -- Eyes
+                        love.graphics.setColor(0.8, 0.2, 0.2)
+                        love.graphics.rectangle("fill", -3, -10, 2, 2)
+                        love.graphics.rectangle("fill", 1, -10, 2, 2)
+                        -- Mouth
+                        love.graphics.setColor(0.2, 0.3, 0.2)
+                        love.graphics.rectangle("fill", -2, -8, 4, 1)
+                        -- Running legs
+                        love.graphics.setColor(0.2, 0.3, 0.2)
+                        local legOffset = math.sin(m.animationTimer * 15) * 3
+                        love.graphics.rectangle("fill", -4, 8, 3, 6 + legOffset)
+                        love.graphics.rectangle("fill", 1, 8, 3, 6 - legOffset)
+                        -- Arms
+                        love.graphics.setColor(0.25, 0.35, 0.25)
+                        love.graphics.rectangle("fill", -8, -4, 3, 6)
+                        love.graphics.rectangle("fill", 5, -4, 3, 6)
+                        
+                    elseif m.type.name == "Tank Zombie" then
+                        -- Tank zombie with enhanced 8-bit style
+                        -- Body
+                        love.graphics.setColor(0.4, 0.3, 0.2)
+                        love.graphics.rectangle("fill", -8, -10, 16, 20)
+                        -- Armor plates
+                        love.graphics.setColor(0.6, 0.6, 0.6)
+                        love.graphics.rectangle("fill", -6, -8, 12, 4)
+                        love.graphics.rectangle("fill", -6, 0, 12, 4)
+                        -- Head
+                        love.graphics.setColor(0.5, 0.4, 0.3)
+                        love.graphics.rectangle("fill", -6, -14, 12, 8)
+                        -- Face details
+                        love.graphics.setColor(0.4, 0.3, 0.2)
+                        love.graphics.rectangle("fill", -4, -12, 8, 4)
+                        -- Eyes
+                        love.graphics.setColor(0.8, 0.2, 0.2)
+                        love.graphics.rectangle("fill", -4, -12, 3, 3)
+                        love.graphics.rectangle("fill", 1, -12, 3, 3)
+                        -- Mouth
+                        love.graphics.setColor(0.3, 0.2, 0.1)
+                        love.graphics.rectangle("fill", -3, -9, 6, 2)
+                        -- Arms
+                        love.graphics.setColor(0.5, 0.4, 0.3)
+                        love.graphics.rectangle("fill", -10, -4, 4, 12)
+                        love.graphics.rectangle("fill", 6, -4, 4, 12)
+                        -- Legs
+                        love.graphics.setColor(0.4, 0.3, 0.2)
+                        love.graphics.rectangle("fill", -5, 10, 4, 8)
+                        love.graphics.rectangle("fill", 1, 10, 4, 8)
+                        
+                    elseif m.type.name == "Swarm Zombie" then
+                        -- Swarm zombie with enhanced 8-bit style
+                        -- Body
+                        love.graphics.setColor(0.2, 0.3, 0.4)
+                        love.graphics.rectangle("fill", -5, -6, 10, 12)
+                        -- Shirt details
+                        love.graphics.setColor(0.1, 0.2, 0.3)
+                        love.graphics.rectangle("fill", -3, -3, 6, 6)
+                        -- Head
+                        love.graphics.setColor(0.3, 0.4, 0.5)
+                        love.graphics.rectangle("fill", -3, -10, 6, 4)
+                        -- Face details
+                        love.graphics.setColor(0.2, 0.3, 0.4)
+                        love.graphics.rectangle("fill", -2, -8, 4, 2)
+                        -- Eyes
+                        love.graphics.setColor(0.8, 0.2, 0.2)
+                        love.graphics.rectangle("fill", -2, -8, 1, 1)
+                        love.graphics.rectangle("fill", 1, -8, 1, 1)
+                        -- Mouth
+                        love.graphics.setColor(0.1, 0.2, 0.3)
+                        love.graphics.rectangle("fill", -1, -7, 2, 1)
+                        -- Arms
+                        love.graphics.setColor(0.2, 0.3, 0.4)
+                        love.graphics.rectangle("fill", -6, -3, 2, 4)
+                        love.graphics.rectangle("fill", 4, -3, 2, 4)
+                        -- Legs
+                        love.graphics.setColor(0.15, 0.25, 0.35)
+                        love.graphics.rectangle("fill", -3, 6, 2, 4)
+                        love.graphics.rectangle("fill", 1, 6, 2, 4)
+                        
+                    elseif m.type.name == "Brute Zombie" then
+                        -- Brute zombie with enhanced 8-bit style
+                        -- Body
+                        love.graphics.setColor(0.5, 0.2, 0.2)
+                        love.graphics.rectangle("fill", -8, -10, 16, 20)
+                        -- Muscle details
+                        love.graphics.setColor(0.4, 0.1, 0.1)
+                        love.graphics.rectangle("fill", -6, -8, 12, 16)
+                        -- Head
+                        love.graphics.setColor(0.6, 0.3, 0.3)
+                        love.graphics.rectangle("fill", -6, -14, 12, 8)
+                        -- Face details
+                        love.graphics.setColor(0.5, 0.2, 0.2)
+                        love.graphics.rectangle("fill", -4, -12, 8, 4)
+                        -- Eyes
+                        love.graphics.setColor(0.8, 0.2, 0.2)
+                        love.graphics.rectangle("fill", -4, -12, 3, 3)
+                        love.graphics.rectangle("fill", 1, -12, 3, 3)
+                        -- Mouth
+                        love.graphics.setColor(0.3, 0.1, 0.1)
+                        love.graphics.rectangle("fill", -3, -9, 6, 2)
+                        -- Arms
+                        love.graphics.setColor(0.5, 0.2, 0.2)
+                        love.graphics.rectangle("fill", -10, -4, 4, 12)
+                        love.graphics.rectangle("fill", 6, -4, 4, 12)
+                        -- Legs
+                        love.graphics.setColor(0.4, 0.1, 0.1)
+                        love.graphics.rectangle("fill", -5, 10, 4, 8)
+                        love.graphics.rectangle("fill", 1, 10, 4, 8)
+                        
+                    elseif m.type.name == "Crawler" then
+                        -- Crawler zombie with enhanced 8-bit style
+                        -- Body
+                        love.graphics.setColor(0.3, 0.2, 0.3)
+                        love.graphics.rectangle("fill", -6, -4, 12, 8)
+                        -- Body details
+                        love.graphics.setColor(0.2, 0.1, 0.2)
+                        love.graphics.rectangle("fill", -4, -3, 8, 6)
+                        -- Head
+                        love.graphics.setColor(0.4, 0.3, 0.4)
+                        love.graphics.rectangle("fill", -4, -8, 8, 4)
+                        -- Face details
+                        love.graphics.setColor(0.3, 0.2, 0.3)
+                        love.graphics.rectangle("fill", -3, -7, 6, 2)
+                        -- Eyes
+                        love.graphics.setColor(0.8, 0.2, 0.2)
+                        love.graphics.rectangle("fill", -3, -7, 2, 2)
+                        love.graphics.rectangle("fill", 1, -7, 2, 2)
+                        -- Mouth
+                        love.graphics.setColor(0.2, 0.1, 0.2)
+                        love.graphics.rectangle("fill", -2, -6, 4, 1)
+                        -- Arms
+                        love.graphics.setColor(0.3, 0.2, 0.3)
+                        love.graphics.rectangle("fill", -8, -2, 3, 6)
+                        love.graphics.rectangle("fill", 5, -2, 3, 6)
+                        -- Legs
+                        love.graphics.setColor(0.25, 0.15, 0.25)
+                        love.graphics.rectangle("fill", -4, 4, 3, 4)
+                        love.graphics.rectangle("fill", 1, 4, 3, 4)
+                        
+                    else
+                        -- Default monster appearance with enhanced 8-bit style
+                        -- Body
+                        love.graphics.setColor(m.type.color)
+                        love.graphics.rectangle("fill", -6, -8, 12, 16)
+                        -- Shirt details
+                        local darkerColor = {
+                            m.type.color[1] * 0.7,
+                            m.type.color[2] * 0.7,
+                            m.type.color[3] * 0.7
+                        }
+                        love.graphics.setColor(darkerColor)
+                        love.graphics.rectangle("fill", -4, -4, 8, 8)
+                        -- Head
+                        local lighterColor = {
+                            m.type.color[1] * 1.2,
+                            m.type.color[2] * 1.2,
+                            m.type.color[3] * 1.2
+                        }
+                        love.graphics.setColor(lighterColor)
+                        love.graphics.rectangle("fill", -4, -12, 8, 6)
+                        -- Face details
+                        love.graphics.setColor(darkerColor)
+                        love.graphics.rectangle("fill", -3, -10, 6, 3)
+                        -- Eyes
+                        love.graphics.setColor(0.8, 0.2, 0.2)
+                        love.graphics.rectangle("fill", -3, -10, 2, 2)
+                        love.graphics.rectangle("fill", 1, -10, 2, 2)
+                        -- Mouth
+                        love.graphics.setColor(0.1, 0.1, 0.1)
+                        love.graphics.rectangle("fill", -2, -8, 4, 1)
+                        -- Arms
+                        love.graphics.setColor(m.type.color)
+                        love.graphics.rectangle("fill", -8, -4, 3, 6)
+                        love.graphics.rectangle("fill", 5, -4, 3, 6)
+                        -- Legs
+                        love.graphics.setColor(darkerColor)
+                        love.graphics.rectangle("fill", -4, 8, 3, 6)
+                        love.graphics.rectangle("fill", 1, 8, 3, 6)
+                    end
                 end
                 
                 love.graphics.pop()
             end
             
             -- Draw health bar
-            local barWidth = m.size * 2
-            local barHeight = 5
-            love.graphics.setColor(1, 0, 0)
-            love.graphics.rectangle("fill", m.x - barWidth/2, m.y - m.size - 10, barWidth, barHeight)
-            love.graphics.setColor(0, 1, 0)
-            love.graphics.rectangle("fill", m.x - barWidth/2, m.y - m.size - 10, 
-                                  barWidth * (m.health / m.maxHealth), barHeight)
+            if m.state ~= ANIMATION_STATES.DEATH then
+                local barWidth = m.size * 2
+                local barHeight = 5
+                love.graphics.setColor(1, 0, 0)
+                love.graphics.rectangle("fill", m.x - barWidth/2, m.y - m.size - 10, barWidth, barHeight)
+                love.graphics.setColor(0, 1, 0)
+                love.graphics.rectangle("fill", m.x - barWidth/2, m.y - m.size - 10, 
+                                      barWidth * (m.health / m.maxHealth), barHeight)
+                
+                -- Draw monster name
+                love.graphics.setColor(1, 1, 1)
+                love.graphics.print(m.type.name, m.x - m.size/2, m.y - m.size - 25)
+            end
         end
         
         -- Draw projectiles
@@ -934,11 +1719,30 @@ function love.draw()
         love.graphics.print("Wave: " .. game.wave, 10, 60)
         love.graphics.print("Monsters Left: " .. (game.monstersPerWave - game.monstersKilled), 10, 80)
         
+        -- Draw wave feedback message
+        if game.waveFeedback and game.waveFeedback.timer > 0 then
+            love.graphics.setColor(game.waveFeedback.color)
+            love.graphics.printf(game.waveFeedback.message, 
+                0, love.graphics.getHeight()/2 - 50, 
+                love.graphics.getWidth(), "center")
+        end
+        
         -- Draw coins
         love.graphics.setColor(1, 0.8, 0)
         love.graphics.circle("fill", 30, 100, 10)
         love.graphics.setColor(1, 1, 1)
         love.graphics.print("x " .. game.coins, 45, 95)
+        
+        -- Draw ammo count
+        love.graphics.setColor(1, 1, 1)
+        love.graphics.print("Ammo: " .. gun.ammo .. "/" .. gun.maxAmmo, 10, 120)
+        
+        -- Draw reload indicator if reloading
+        if gun.isReloading then
+            local reloadProgress = (love.timer.getTime() - gun.reloadStartTime) / gun.reloadTime
+            love.graphics.setColor(1, 0.5, 0)
+            love.graphics.rectangle("fill", 10, 140, 100 * reloadProgress, 10)
+        end
     elseif game.state == "gameover" then
         -- Draw game over screen
         love.graphics.setColor(1, 1, 1)
@@ -1012,6 +1816,14 @@ function love.keypressed(key)
     end
 end
 
+-- Handle mouse wheel
+function love.wheelmoved(x, y)
+    if game.state == "shop" then
+        -- Scroll up/down in shop
+        game.shopScroll = math.max(0, math.min(#game.shopItems - game.itemsPerPage, game.shopScroll - y))
+    end
+end
+
 -- Handle mouse clicks
 function love.mousepressed(x, y, button)
     if button == 1 then
@@ -1023,17 +1835,18 @@ function love.mousepressed(x, y, button)
             local startIndex = game.shopScroll + 1
             local endIndex = math.min(startIndex + game.itemsPerPage - 1, #game.shopItems)
             
-            -- Check scroll buttons first
+            -- Check scroll bar click
             if #game.shopItems > game.itemsPerPage then
-                -- Up button
-                if x >= 720 and x <= 760 and y >= 150 and y <= 190 then
-                    game.shopScroll = math.max(0, game.shopScroll - 1)
-                    return
-                end
+                local scrollBarX = 720
+                local scrollBarY = 150
+                local scrollBarHeight = 200
+                local scrollBarWidth = 20
                 
-                -- Down button
-                if x >= 720 and x <= 760 and y >= itemY + (endIndex - startIndex) * 100 - 50 and y <= itemY + (endIndex - startIndex) * 100 - 10 then
-                    game.shopScroll = math.min(#game.shopItems - game.itemsPerPage, game.shopScroll + 1)
+                if x >= scrollBarX and x <= scrollBarX + scrollBarWidth and
+                   y >= scrollBarY and y <= scrollBarY + scrollBarHeight then
+                    -- Calculate new scroll position based on click
+                    local clickRatio = (y - scrollBarY) / scrollBarHeight
+                    game.shopScroll = math.floor(clickRatio * (#game.shopItems - game.itemsPerPage))
                     return
                 end
             end
@@ -1053,7 +1866,7 @@ function love.mousepressed(x, y, button)
             
             -- Check continue button
             if x >= love.graphics.getWidth()/2 - 100 and x <= love.graphics.getWidth()/2 + 100 and
-               y >= itemY + 50 and y <= itemY + 100 then
+               y >= love.graphics.getHeight() - 100 and y <= love.graphics.getHeight() - 50 then
                 game.state = "playing"
                 game.score = 0
                 game.wave = 1
@@ -1098,6 +1911,26 @@ function drawShopItems()
     local startIndex = game.shopScroll + 1
     local endIndex = math.min(startIndex + game.itemsPerPage - 1, #game.shopItems)
     
+    -- Draw scroll indicator
+    if #game.shopItems > game.itemsPerPage then
+        local scrollBarHeight = 200
+        local scrollBarY = 150
+        local scrollBarX = 720
+        local scrollBarWidth = 20
+        
+        -- Draw scroll bar background
+        love.graphics.setColor(0.2, 0.2, 0.3)
+        love.graphics.rectangle("fill", scrollBarX, scrollBarY, scrollBarWidth, scrollBarHeight)
+        
+        -- Calculate scroll thumb position and size
+        local thumbHeight = math.max(30, (game.itemsPerPage / #game.shopItems) * scrollBarHeight)
+        local thumbY = scrollBarY + (game.shopScroll / (#game.shopItems - game.itemsPerPage)) * (scrollBarHeight - thumbHeight)
+        
+        -- Draw scroll thumb
+        love.graphics.setColor(0.4, 0.4, 0.5)
+        love.graphics.rectangle("fill", scrollBarX, thumbY, scrollBarWidth, thumbHeight)
+    end
+    
     -- Draw visible items
     for i = startIndex, endIndex do
         local item = game.shopItems[i]
@@ -1131,30 +1964,5 @@ function drawShopItems()
         end
         
         y = y + 100
-    end
-    
-    -- Draw scroll buttons if there are more items than can fit on screen
-    if #game.shopItems > game.itemsPerPage then
-        -- Up button
-        love.graphics.setColor(0.3, 0.3, 0.4)
-        love.graphics.rectangle("fill", 720, 150, 40, 40)
-        love.graphics.setColor(1, 1, 1)
-        -- Draw up arrow
-        love.graphics.polygon("fill", 
-            740, 160, -- Top point
-            730, 180, -- Bottom left
-            750, 180  -- Bottom right
-        )
-        
-        -- Down button
-        love.graphics.setColor(0.3, 0.3, 0.4)
-        love.graphics.rectangle("fill", 720, y - 50, 40, 40)
-        love.graphics.setColor(1, 1, 1)
-        -- Draw down arrow
-        love.graphics.polygon("fill", 
-            740, y - 30, -- Bottom point
-            730, y - 50, -- Top left
-            750, y - 50  -- Top right
-        )
     end
 end 
